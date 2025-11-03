@@ -1,0 +1,73 @@
+estructura base de datos:
+CREATE TABLE Usuario (
+    IdUsuario INT PRIMARY KEY AUTO_INCREMENT,
+    Nombre VARCHAR(100) NOT NULL,
+    Correo VARCHAR(150) UNIQUE NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Hotel (
+    IdHotel INT PRIMARY KEY AUTO_INCREMENT,
+    NombreHotel VARCHAR(100) NOT NULL,
+    Ubicacion VARCHAR(150) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Habitacion (
+    IdHabitacion INT PRIMARY KEY AUTO_INCREMENT,
+    IdHotel INT NOT NULL,
+    TipoHabitacion ENUM('Sencilla', 'Doble', 'Suite') NOT NULL,
+    Precio FLOAT NOT NULL,
+    MaximoHuespedes INT NOT NULL,
+    FOREIGN KEY (IdHotel) REFERENCES Hotel(IdHotel) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE Transporte (
+    IdTransporte INT PRIMARY KEY AUTO_INCREMENT,
+    TipoTransporte ENUM('Autobus', 'Avion') NOT NULL,
+    PrecioPorPersona FLOAT NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Descuento (
+    IdDescuento INT PRIMARY KEY AUTO_INCREMENT,
+    TipoHuesped ENUM('Adulto', 'Niño') NOT NULL,
+    PorcentajeDescuento FLOAT NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Reservacion (
+    IdReservacion INT PRIMARY KEY AUTO_INCREMENT,
+    FechaInicio DATE NOT NULL,
+    FechaFin DATE NOT NULL,
+    PrecioTotal FLOAT NOT NULL,
+    NumHuespedes INT NOT NULL,
+    NumHabitaciones INT NOT NULL,
+    IdHotel INT NOT NULL,
+    IdTransporte INT NOT NULL,
+    Estatus ENUM('Activa', 'Inactiva', 'Cancelada') NOT NULL,
+    FOREIGN KEY (IdHotel) REFERENCES Hotel(IdHotel) ON DELETE CASCADE,
+    FOREIGN KEY (IdTransporte) REFERENCES Transporte(IdTransporte) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE Usuario_Reservacion (
+    IdUsuario INT NOT NULL,
+    IdReservacion INT NOT NULL,
+    PRIMARY KEY (IdUsuario, IdReservacion),
+    FOREIGN KEY (IdUsuario) REFERENCES Usuario(IdUsuario) ON DELETE CASCADE,
+    FOREIGN KEY (IdReservacion) REFERENCES Reservacion(IdReservacion) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+
+Requisitos:
+Instalar composer para usar laravel
+instalar laravel 
+instalar la extension de visual studio code: Thuder Client (para probar API)
+instalar git tanto desktop como para windows
+instalar docker
+instalar xammp 
+
+inicializar el proyecto:
+php artisan serve
+
+
+
+
+Hacer un respaldo antes de cualquier commit para no corromper el proyecto
