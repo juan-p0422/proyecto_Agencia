@@ -71,3 +71,9 @@ php artisan serve
 
 
 Hacer un respaldo antes de cualquier commit para no corromper el proyecto
+
+
+links informativos:
+https://git-scm.com/install/windows //instalar git
+https://www.youtube.com/watch?v=_Rsen6614Dg // instalar laravel, composer y xammp
+https://www.youtube.com/watch?v=eLI8c_NtkBk //video base de un tipo haciendo un proyecto en laravel, da una idea de como es que se manipula la base de datos, como se usa ThunderClient y comandos para laravel
