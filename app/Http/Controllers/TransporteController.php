@@ -25,6 +25,7 @@ class TransporteController extends Controller
         $data = $request->validate([
             'TipoTransporte' => ['required', Rule::in(['Autobus','Avion'])],
             'PrecioPorPersona' => ['required','numeric','min:0'],
+            'NombreEmpresa'    => ['required','string','max:120'],
         ]);
 
         $t = Transporte::create($data);
@@ -39,6 +40,7 @@ class TransporteController extends Controller
         $data = $request->validate([
             'TipoTransporte' => ['sometimes','required', Rule::in(['Autobus','Avion'])],
             'PrecioPorPersona' => ['sometimes','required','numeric','min:0'],
+            'NombreEmpresa'    => ['sometimes','required','string','max:120'],
         ]);
 
         $t->update($data);

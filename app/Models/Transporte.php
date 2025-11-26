@@ -10,7 +10,7 @@ class Transporte extends Model
     protected $primaryKey = 'IdTransporte';
     public $timestamps = false;
 
-    protected $fillable = ['TipoTransporte', 'PrecioPorPersona'];
+    protected $fillable = ['TipoTransporte', 'PrecioPorPersona', 'NombreEmpresa'];
 
     public function reservaciones()
     {
