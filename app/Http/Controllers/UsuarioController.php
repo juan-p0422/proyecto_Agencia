@@ -25,6 +25,7 @@ class UsuarioController extends Controller
         $data = $request->validate([
             'Nombre' => ['required','string','max:100'],
             'Correo' => ['required','email','max:150','unique:Usuario,Correo'],
+            'Password' => ['required','string','min:8'] // mínimo 8 caracteres
         ]);
 
         $usuario = Usuario::create($data);
@@ -42,6 +43,7 @@ class UsuarioController extends Controller
                 'sometimes','required','email','max:150',
                 Rule::unique('Usuario','Correo')->ignore($usuario->IdUsuario, 'IdUsuario')
             ],
+            'Password' => ['sometimes','required','string','min:8']
         ]);
 
         $usuario->update($data);
@@ -56,4 +58,3 @@ class UsuarioController extends Controller
         return response()->json(['mensaje' => 'Eliminado']);
     }
 }
-

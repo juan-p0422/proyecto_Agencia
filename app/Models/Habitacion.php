@@ -10,7 +10,7 @@ class Habitacion extends Model
     protected $primaryKey = 'IdHabitacion';
     public $timestamps = false;
 
-    protected $fillable = ['IdHotel', 'TipoHabitacion', 'Precio', 'MaximoHuespedes'];
+    protected $fillable = ['IdHotel', 'TipoHabitacion', 'Precio', 'MaximoHuespedes', 'HabitacionesTotales'];
 
     public function hotel()
     {
