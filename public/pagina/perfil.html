@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Mi Perfil</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Mi Perfil</h1>
+    <nav id="menu"></nav>
+  </header>
+
+  <main>
+    <section>
+      <h2>Datos</h2>
+      <div id="userInfo"></div>
+    </section>
+
+    <section>
+      <h2>Mis Reservaciones</h2>
+      <div id="misReservaciones" class="grid"></div>
+      <p id="noRes" style="display:none;">No tienes reservaciones.</p>
+    </section>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      renderMenu();
+      const user = getCurrentUser();
+      const userDiv = document.getElementById("userInfo");
+      const reservasDiv = document.getElementById("misReservaciones");
+
+      if (!user) {
+        userDiv.innerHTML = "<p>No has iniciado sesión. <a href='login.html'>Inicia sesión</a></p>";
+        return;
+      }
+
+      userDiv.innerHTML = `<p><strong>Nombre:</strong> ${user.Nombre}</p><p><strong>Correo:</strong> ${user.Correo}</p>`;
+
+      reservasDiv.innerHTML = "Cargando...";
+
+      try {
+        const reservas = await fetchReservaciones();
+        // filtramos: aquellas reservas a las que el usuario está asociado.
+        const mis = [];
+        for (const r of reservas) {
+          try {
+            const usuarios = await fetchReservacionUsuarios(r.IdReservacion);
+            if (usuarios && usuarios.some(u => Number(u.IdUsuario) === Number(user.IdUsuario))) {
+              // añadir info útil: hotel y transporte
+              mis.push(r);
+            }
+          } catch (e) {
+            console.error("Error comprobando usuarios para reservación", r.IdReservacion, e);
+          }
+        }
+
+        if (mis.length === 0) {
+          reservasDiv.innerHTML = "";
+          document.getElementById("noRes").style.display = "block";
+          return;
+        }
+
+        // obtener hoteles y transportes para mostrar nombres
+        const hoteles = await fetchHoteles();
+        const transportes = await fetchTransportes();
+
+        reservasDiv.innerHTML = mis.map(r => {
+          const hotel = hoteles.find(h => Number(h.IdHotel) === Number(r.IdHotel));
+          const transporte = transportes.find(t => Number(t.IdTransporte) === Number(r.IdTransporte));
+          return `
+            <div class="card">
+              <h4>Reserva #${r.IdReservacion} — ${r.Estatus}</h4>
+              <p><strong>Hotel:</strong> ${hotel ? hotel.NombreHotel : r.IdHotel}</p>
+              <p><strong>Fechas:</strong> ${r.FechaInicio} → ${r.FechaFin}</p>
+              <p><strong>Huéspedes:</strong> ${r.NumHuespedes} | <strong>Habitaciones:</strong> ${r.NumHabitaciones}</p>
+              <p><strong>Transporte:</strong> ${transporte ? transporte.NombreEmpresa : r.IdTransporte} — $${r.PrecioTotal}</p>
+              <div class="card-actions">
+                <button onclick="cancelReserva(${r.IdReservacion})">Cancelar</button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (err) {
+        console.error(err);
+        reservasDiv.innerHTML = "<p>Error al cargar reservaciones.</p>";
+      }
+    });
+
+    async function cancelReserva(id) {
+      if (!confirm("¿Deseas cancelar esta reservación?")) return;
+      try {
+        // Hacemos DELETE (o PUT cambiando Estatus) según lo que acepte tu API.
+        // Intentaremos PUT cambiando Estatus a 'Cancelada' (más seguro si la API no permite DELETE).
+        await apiPut(`reservaciones/${id}`, { Estatus: "Cancelada" });
+        alert("Reservación cancelada.");
+        location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("Error cancelando reservación. Intenta nuevamente.");
+      }
+    }
+  </script>
+</body>
+</html>

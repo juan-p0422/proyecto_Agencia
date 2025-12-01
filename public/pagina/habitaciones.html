@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Habitaciones</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Habitaciones</h1>
+    <nav id="menu"></nav>
+  </header>
+
+  <main>
+    <section>
+      <h2 id="hotelNombre">Habitaciones</h2>
+      <div id="habitacionesList" class="grid"></div>
+      <p id="noRooms" style="display:none;">No se encontraron habitaciones para este hotel.</p>
+    </section>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    function getQueryParam(name) {
+      return new URLSearchParams(location.search).get(name);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      renderMenu();
+      const hotelId = getQueryParam("hotelId");
+      const cont = document.getElementById("habitacionesList");
+      const hotelTitle = document.getElementById("hotelNombre");
+
+      if (!hotelId) {
+        cont.innerHTML = "<p>Hotel no especificado.</p>";
+        return;
+      }
+
+      cont.innerHTML = "Cargando...";
+
+      try {
+        const hoteles = await fetchHoteles();
+        const hotel = hoteles.find(h => String(h.IdHotel) === String(hotelId));
+        hotelTitle.textContent = hotel ? `Habitaciones - ${hotel.NombreHotel}` : "Habitaciones";
+
+        const habitaciones = await fetchHabitaciones();
+        const filtradas = habitaciones.filter(h => String(h.IdHotel) === String(hotelId));
+
+        if (!filtradas.length) {
+          document.getElementById("noRooms").style.display = "block";
+          cont.innerHTML = "";
+          return;
+        }
+
+        cont.innerHTML = filtradas.map(h => `
+          <div class="card">
+            <h4>${h.TipoHabitacion} — $${h.Precio.toLocaleString()}</h4>
+            <p>Máximo huéspedes: ${h.MaximoHuespedes}</p>
+            <a class="btn" href="reservar.html?hotelId=${h.IdHotel}&habitacionId=${h.IdHabitacion}">Reservar</a>
+          </div>
+        `).join("");
+      } catch (err) {
+        cont.innerHTML = "<p>Error al obtener habitaciones.</p>";
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>

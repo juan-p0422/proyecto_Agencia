@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Hoteles</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Hoteles</h1>
+    <nav id="menu"></nav>
+  </header>
+
+  <main>
+    <section>
+      <div id="hotelesList" class="grid"></div>
+    </section>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      renderMenu();
+      const cont = document.getElementById("hotelesList");
+      cont.innerHTML = "Cargando...";
+      try {
+        const hoteles = await fetchHoteles();
+        cont.innerHTML = hoteles.map(h => `
+          <div class="card">
+            <h4>${h.NombreHotel}</h4>
+            <p>${h.Ubicacion}</p>
+            <a class="btn" href="habitaciones.html?hotelId=${h.IdHotel}">Ver habitaciones</a>
+          </div>
+        `).join("");
+      } catch (e) {
+        cont.innerHTML = "<p>Error al obtener hoteles</p>";
+        console.error(e);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Reservar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Reservar Habitación</h1>
+        <nav id="menu"></nav>
+    </header>
+
+    <main>
+        <section>
+            <h2 id="titulo">Cargando habitación...</h2>
+
+            <form id="reservarForm">
+                <label>Fecha inicio:</label>
+                <input type="date" id="fechaInicio" required>
+
+                <label>Fecha fin:</label>
+                <input type="date" id="fechaFin" required>
+
+                <label>Huéspedes:</label>
+                <input type="number" id="numHuespedes" value="1" min="1" required>
+
+                <label>Número de habitaciones:</label>
+                <input type="number" id="numHabitaciones" value="1" min="1" required>
+
+                <label>Transporte:</label>
+                <select id="transporteSelect"></select>
+
+                <p id="precioPreview" style="font-weight: bold;">Precio estimado: $0</p>
+
+                <button type="submit">Confirmar Reserva</button>
+            </form>
+
+            <p id="msg" style="margin-top: 20px; font-weight:bold;"></p>
+        </section>
+    </main>
+
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
+
+    <script>
+        function getQueryParam(name) {
+            return new URLSearchParams(location.search).get(name);
+        }
+
+        function daysBetween(start, end) {
+            const ms = new Date(end) - new Date(start);
+            return Math.max(Math.ceil(ms / (1000 * 60 * 60 * 24)), 1);
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            renderMenu();
+
+            const habitacionId = getQueryParam("habitacionId");
+            const hotelId = getQueryParam("hotelId");
+            const titulo = document.getElementById("titulo");
+            const transporteSelect = document.getElementById("transporteSelect");
+            const precioPreview = document.getElementById("precioPreview");
+            const form = document.getElementById("reservarForm");
+            const msg = document.getElementById("msg");
+
+            if (!habitacionId || !hotelId) {
+                titulo.textContent = "Habitación no especificada.";
+                return;
+            }
+
+            try {
+                const habitaciones = await fetchHabitaciones();
+                const habit = habitaciones.find(h => String(h.IdHabitacion) === habitacionId);
+
+                if (!habit) {
+                    titulo.textContent = "Habitación no encontrada.";
+                    return;
+                }
+
+                titulo.textContent = `${habit.TipoHabitacion} — $${habit.Precio}`;
+
+                // cargar transportes
+                const transportes = await fetchTransportes();
+                transporteSelect.innerHTML = transportes
+                    .map(t => `<option value="${t.IdTransporte}" data-price="${t.PrecioPorPersona}">
+        ${t.TipoTransporte} (${t.NombreEmpresa}) - $${t.PrecioPorPersona}
+      </option>`)
+                    .join("");
+
+                // actualizar precio dinámicamente
+                function actualizarPrecio() {
+                    const fi = document.getElementById("fechaInicio").value;
+                    const ff = document.getElementById("fechaFin").value;
+                    const nh = Number(document.getElementById("numHabitaciones").value);
+                    const nhues = Number(document.getElementById("numHuespedes").value);
+                    const transportePrice = Number(transporteSelect.selectedOptions[0].dataset.price);
+
+                    if (!fi || !ff) return;
+
+                    const dias = daysBetween(fi, ff);
+                    const total = habit.Precio * dias * nh + transportePrice * nhues;
+
+                    precioPreview.textContent = `Precio estimado: $${total}`;
+                }
+
+                document.getElementById("fechaInicio").addEventListener("change", actualizarPrecio);
+                document.getElementById("fechaFin").addEventListener("change", actualizarPrecio);
+                document.getElementById("numHabitaciones").addEventListener("input", actualizarPrecio);
+                document.getElementById("numHuespedes").addEventListener("input", actualizarPrecio);
+                transporteSelect.addEventListener("change", actualizarPrecio);
+
+                actualizarPrecio();
+
+                // enviar formulario
+                form.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const fi = document.getElementById("fechaInicio").value;
+                    const ff = document.getElementById("fechaFin").value;
+                    const nhues = Number(document.getElementById("numHuespedes").value);
+                    const nh = Number(document.getElementById("numHabitaciones").value);
+                    const transporteId = Number(transporteSelect.value);
+
+                    const dias = daysBetween(fi, ff);
+                    const transpPrice = Number(transporteSelect.selectedOptions[0].dataset.price);
+                    const precioTotal = habit.Precio * dias * nh + transpPrice * nhues;
+
+                    const body = {
+                        FechaInicio: fi,
+                        FechaFin: ff,
+                        PrecioTotal: precioTotal,
+                        NumHuespedes: nhues,
+                        NumHabitaciones: nh,
+                        IdHotel: Number(hotelId),
+                        IdTransporte: transporteId,
+                        Estatus: "Activa"
+                    };
+
+                    try {
+                        msg.textContent = "Creando reservación...";
+
+                        const created = await createReservacion(body);
+
+                        if (!created.IdReservacion) {
+                            msg.textContent = "Error: la API no devolvió una reservación válida.";
+                            return;
+                        }
+
+                        const reservacionId = created.IdReservacion;
+
+                        const usuario = getCurrentUser();
+                        if (!usuario) {
+                            alert("Debes iniciar sesión para completar la reservación.");
+                            location.href = "login.html";
+                            return;
+                        }
+
+                        // Asociar usuario
+                        await attachUsuarioToReservacion(reservacionId, usuario.IdUsuario);
+
+                        msg.textContent = "Reservación creada correctamente. Redirigiendo...";
+                        setTimeout(() => {
+                            location.href = "perfil.html";
+                        }, 1200);
+
+                    } catch (err) {
+                        console.error(err);
+                        msg.textContent = "Error creando reservación.";
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                titulo.textContent = "Error cargando datos.";
+            }
+        });
+    </script>
+
+</body>
+
+</html>
