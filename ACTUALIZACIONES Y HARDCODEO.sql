@@ -145,10 +145,9 @@ INSERT INTO Descuento (TipoHuesped, PorcentajeDescuento) VALUES
 
 ACTUALIZACION TOTAL HABITACIONES:
 
-ALTER TABLE Hotel
-ADD COLUMN IdHabitacionDestacada INT NULL,
-ADD CONSTRAINT fk_hotel_habitacion_destacada
-  FOREIGN KEY (IdHabitacionDestacada) REFERENCES Habitacion(IdHabitacion) ON DELETE SET NULL;
+ALTER TABLE Habitacion
+ADD COLUMN HabitacionesTotales INT NOT NULL DEFAULT 0,
+ADD INDEX idx_habitacion_disponibilidad (IdHotel, TipoHabitacion, HabitacionesTotales);
 
 -----------------------------------------------------------------------------------------
 
