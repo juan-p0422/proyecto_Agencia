@@ -14,6 +14,22 @@ body {
   color: #111;
 }
 
+.btn-home {
+  display: inline-block;
+  background: #005fa3;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-decoration: none;
+  margin-top: 10px;
+}
+
+.btn-home:hover {
+  background: #003d80;
+}
+
+
 header {
   display:flex;
   justify-content:space-between;

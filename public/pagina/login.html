@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
   <title>Iniciar Sesión</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="centered">
-    <h2>Iniciar Sesión</h2>
-    <form id="loginForm">
-      <label>Correo</label>
-      <input type="email" id="correo" required />
-      <button type="submit">Entrar</button>
-    </form>
-    <p>¿No tienes cuenta? <a href="register.html">Regístrate</a></p>
-  </main>
 
-  <script src="api.js"></script>
-  <script src="auth.js"></script>
+<main class="centered">
+  <h2>Iniciar Sesión</h2>
+
+  <form id="loginForm">
+    <label>Correo</label>
+    <input type="email" id="correo" required>
+
+    <label>Contraseña</label>
+    <input type="password" id="password" required>
+
+    <button type="submit">Entrar</button>
+  </form>
+
+  <p>¿No tienes cuenta? <a href="register.html">Registrate</a></p>
+</main>
+
+<script src="api.js"></script>
+<script src="auth.js"></script>
+
 </body>
 </html>

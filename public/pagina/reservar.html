@@ -1,185 +1,236 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Reservar</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Reservar Habitación</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <header>
-        <h1>Reservar Habitación</h1>
-        <nav id="menu"></nav>
-    </header>
+<header>
+    <a href="index.html" class="btn-home">← Volver al inicio</a>
+  <h1>Reservar Habitación</h1>
+  <nav id="menu"></nav>
+</header>
 
-    <main>
-        <section>
-            <h2 id="titulo">Cargando habitación...</h2>
+<main>
+  <section>
+    <h2 id="titulo">Cargando habitación...</h2>
 
-            <form id="reservarForm">
-                <label>Fecha inicio:</label>
-                <input type="date" id="fechaInicio" required>
+    <p id="disponibles" style="font-weight:bold;"></p>
 
-                <label>Fecha fin:</label>
-                <input type="date" id="fechaFin" required>
+    <form id="reservarForm">
+      <label>Fecha inicio:</label>
+      <input type="date" id="fechaInicio" required>
 
-                <label>Huéspedes:</label>
-                <input type="number" id="numHuespedes" value="1" min="1" required>
+      <label>Fecha fin:</label>
+      <input type="date" id="fechaFin" required>
 
-                <label>Número de habitaciones:</label>
-                <input type="number" id="numHabitaciones" value="1" min="1" required>
+      <label>Huéspedes:</label>
+      <input type="number" id="numHuespedes" value="1" min="1" required>
 
-                <label>Transporte:</label>
-                <select id="transporteSelect"></select>
+      <label>Número de habitaciones:</label>
+      <input type="number" id="numHabitaciones" value="1" min="1" required>
 
-                <p id="precioPreview" style="font-weight: bold;">Precio estimado: $0</p>
+      <label>Transporte:</label>
+      <select id="transporteSelect"></select>
 
-                <button type="submit">Confirmar Reserva</button>
-            </form>
+      <p id="precioPreview" style="font-weight: bold;">Precio estimado: $0</p>
 
-            <p id="msg" style="margin-top: 20px; font-weight:bold;"></p>
-        </section>
-    </main>
+      <button type="submit">Confirmar Reserva</button>
+    </form>
 
-    <script src="api.js"></script>
-    <script src="auth.js"></script>
+    <p id="msg" style="margin-top: 20px; font-weight:bold;"></p>
+  </section>
+</main>
 
-    <script>
-        function getQueryParam(name) {
-            return new URLSearchParams(location.search).get(name);
-        }
+<script src="api.js"></script>
+<script src="auth.js"></script>
 
-        function daysBetween(start, end) {
-            const ms = new Date(end) - new Date(start);
-            return Math.max(Math.ceil(ms / (1000 * 60 * 60 * 24)), 1);
-        }
+<script>
+function getQueryParam(name) {
+  return new URLSearchParams(location.search).get(name);
+}
 
-        document.addEventListener("DOMContentLoaded", async () => {
-            renderMenu();
+function daysBetween(start, end) {
+  const ms = new Date(end) - new Date(start);
+  return Math.max(Math.ceil(ms / 86400000), 1);
+}
 
-            const habitacionId = getQueryParam("habitacionId");
-            const hotelId = getQueryParam("hotelId");
-            const titulo = document.getElementById("titulo");
-            const transporteSelect = document.getElementById("transporteSelect");
-            const precioPreview = document.getElementById("precioPreview");
-            const form = document.getElementById("reservarForm");
-            const msg = document.getElementById("msg");
+document.addEventListener("DOMContentLoaded", async () => {
+  renderMenu();
 
-            if (!habitacionId || !hotelId) {
-                titulo.textContent = "Habitación no especificada.";
-                return;
-            }
+  const habitacionId = getQueryParam("habitacionId");
+  const hotelId = getQueryParam("hotelId");
 
-            try {
-                const habitaciones = await fetchHabitaciones();
-                const habit = habitaciones.find(h => String(h.IdHabitacion) === habitacionId);
+  const titulo = document.getElementById("titulo");
+  const disp = document.getElementById("disponibles");
+  const transporteSelect = document.getElementById("transporteSelect");
+  const precioPreview = document.getElementById("precioPreview");
+  const msg = document.getElementById("msg");
+  const form = document.getElementById("reservarForm");
+  const numHuespedes = document.getElementById("numHuespedes");
+  const numHabitaciones = document.getElementById("numHabitaciones");
 
-                if (!habit) {
-                    titulo.textContent = "Habitación no encontrada.";
-                    return;
-                }
+  if (!habitacionId || !hotelId) {
+    titulo.textContent = "Habitación no especificada.";
+    return;
+  }
 
-                titulo.textContent = `${habit.TipoHabitacion} — $${habit.Precio}`;
+  try {
+    const habitaciones = await fetchHabitaciones();
+    const habit = habitaciones.find(h => String(h.IdHabitacion) === habitacionId);
 
-                // cargar transportes
-                const transportes = await fetchTransportes();
-                transporteSelect.innerHTML = transportes
-                    .map(t => `<option value="${t.IdTransporte}" data-price="${t.PrecioPorPersona}">
+    if (!habit) {
+      titulo.textContent = "Habitación no encontrada.";
+      return;
+    }
+
+    titulo.textContent = `${habit.TipoHabitacion} — $${habit.Precio}/noche`;
+    disp.textContent = `Disponibles: ${habit.HabitacionesTotales}`;
+
+    if (habit.HabitacionesTotales === 0) {
+      msg.textContent = "No hay habitaciones disponibles.";
+      form.style.display = "none";
+      return;
+    }
+
+    const transportes = await fetchTransportes();
+    transporteSelect.innerHTML = transportes.map(t => `
+      <option value="${t.IdTransporte}" data-price="${t.PrecioPorPersona}">
         ${t.TipoTransporte} (${t.NombreEmpresa}) - $${t.PrecioPorPersona}
-      </option>`)
-                    .join("");
+      </option>
+    `).join("");
 
-                // actualizar precio dinámicamente
-                function actualizarPrecio() {
-                    const fi = document.getElementById("fechaInicio").value;
-                    const ff = document.getElementById("fechaFin").value;
-                    const nh = Number(document.getElementById("numHabitaciones").value);
-                    const nhues = Number(document.getElementById("numHuespedes").value);
-                    const transportePrice = Number(transporteSelect.selectedOptions[0].dataset.price);
+    function actualizarMaximos() {
+      const nh = Number(numHabitaciones.value);
+      const maxHues = habit.MaximoHuespedes * nh;
+      numHuespedes.max = maxHues;
+    }
 
-                    if (!fi || !ff) return;
+    function actualizarPrecio() {
+      const fi = fechaInicio.value;
+      const ff = fechaFin.value;
+      let nh = Number(numHabitaciones.value);
+      let nhues = Number(numHuespedes.value);
+      const transpPrice = Number(transporteSelect.selectedOptions[0].dataset.price);
 
-                    const dias = daysBetween(fi, ff);
-                    const total = habit.Precio * dias * nh + transportePrice * nhues;
+      if (!fi || !ff) return;
 
-                    precioPreview.textContent = `Precio estimado: $${total}`;
-                }
+      if (nh > habit.HabitacionesTotales) {
+        alert(`Solo hay ${habit.HabitacionesTotales} habitaciones disponibles.`);
+        numHabitaciones.value = habit.HabitacionesTotales;
+        nh = habit.HabitacionesTotales;
+      }
 
-                document.getElementById("fechaInicio").addEventListener("change", actualizarPrecio);
-                document.getElementById("fechaFin").addEventListener("change", actualizarPrecio);
-                document.getElementById("numHabitaciones").addEventListener("input", actualizarPrecio);
-                document.getElementById("numHuespedes").addEventListener("input", actualizarPrecio);
-                transporteSelect.addEventListener("change", actualizarPrecio);
+      const maxPermitidos = habit.MaximoHuespedes * nh;
+      if (nhues > maxPermitidos) {
+        alert(`Máximo ${maxPermitidos} huésped(es) permitidos para ${nh} habitación(es).`);
+        numHuespedes.value = maxPermitidos;
+        nhues = maxPermitidos;
+      }
 
-                actualizarPrecio();
+      const dias = daysBetween(fi, ff);
+      const total = habit.Precio * dias * nh + transpPrice;
+      precioPreview.textContent = `Precio estimado: $${total}`;
+    }
 
-                // enviar formulario
-                form.addEventListener("submit", async (e) => {
-                    e.preventDefault();
+    numHabitaciones.addEventListener("input", () => {
+      actualizarMaximos();
+      actualizarPrecio();
+    });
+    numHuespedes.addEventListener("input", actualizarPrecio);
+    fechaInicio.addEventListener("change", actualizarPrecio);
+    fechaFin.addEventListener("change", actualizarPrecio);
+    transporteSelect.addEventListener("change", actualizarPrecio);
 
-                    const fi = document.getElementById("fechaInicio").value;
-                    const ff = document.getElementById("fechaFin").value;
-                    const nhues = Number(document.getElementById("numHuespedes").value);
-                    const nh = Number(document.getElementById("numHabitaciones").value);
-                    const transporteId = Number(transporteSelect.value);
+    actualizarMaximos();
+    actualizarPrecio();
 
-                    const dias = daysBetween(fi, ff);
-                    const transpPrice = Number(transporteSelect.selectedOptions[0].dataset.price);
-                    const precioTotal = habit.Precio * dias * nh + transpPrice * nhues;
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
 
-                    const body = {
-                        FechaInicio: fi,
-                        FechaFin: ff,
-                        PrecioTotal: precioTotal,
-                        NumHuespedes: nhues,
-                        NumHabitaciones: nh,
-                        IdHotel: Number(hotelId),
-                        IdTransporte: transporteId,
-                        Estatus: "Activa"
-                    };
+      const usuario = getCurrentUser();
+      if (!usuario) {
+        alert("Debes iniciar sesión para reservar.");
+        location.href = "login.html";
+        return;
+      }
 
-                    try {
-                        msg.textContent = "Creando reservación...";
+      const nh = Number(numHabitaciones.value);
+      const nhues = Number(numHuespedes.value);
+      const maxPermitidos = habit.MaximoHuespedes * nh;
 
-                        const created = await createReservacion(body);
+      if (nhues > maxPermitidos) {
+        alert(`Solo se permiten ${maxPermitidos} huésped(es) para ${nh} habitación(es).`);
+        return;
+      }
 
-                        if (!created.IdReservacion) {
-                            msg.textContent = "Error: la API no devolvió una reservación válida.";
-                            return;
-                        }
+      msg.textContent = "Creando reservación...";
 
-                        const reservacionId = created.IdReservacion;
+      const body = {
+        FechaInicio: fechaInicio.value,
+        FechaFin: fechaFin.value,
+        PrecioTotal: Number(precioPreview.textContent.replace(/\D/g, "")),
+        NumHuespedes: nhues,
+        NumHabitaciones: nh,
+        IdHotel: Number(hotelId),
+        IdTransporte: Number(transporteSelect.value),
+        IdHabitacion: Number(habitacionId),
+        Estatus: "Activa"
+      };
 
-                        const usuario = getCurrentUser();
-                        if (!usuario) {
-                            alert("Debes iniciar sesión para completar la reservación.");
-                            location.href = "login.html";
-                            return;
-                        }
+      const res = await fetch(`${API_URL}reservaciones`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
 
-                        // Asociar usuario
-                        await attachUsuarioToReservacion(reservacionId, usuario.IdUsuario);
+      const data = await res.json();
 
-                        msg.textContent = "Reservación creada correctamente. Redirigiendo...";
-                        setTimeout(() => {
-                            location.href = "perfil.html";
-                        }, 1200);
+      if (res.status === 409) {
+        msg.textContent = "No hay suficientes habitaciones disponibles.";
+        return;
+      }
 
-                    } catch (err) {
-                        console.error(err);
-                        msg.textContent = "Error creando reservación.";
-                    }
-                });
+      if (!res.ok) {
+        msg.textContent = "Error al crear reservación.";
+        console.error(data);
+        return;
+      }
 
-            } catch (err) {
-                console.error(err);
-                titulo.textContent = "Error cargando datos.";
-            }
-        });
-    </script>
+      msg.textContent = "Reservación creada exitosamente. Asociando usuario...";
+
+      await attachUsuarioToReservacion(data.IdReservacion, usuario.IdUsuario);
+
+      setTimeout(() => {
+        location.href = "perfil.html";
+      }, 1200);
+
+    });
+
+  } catch (err) {
+    console.error(err);
+    titulo.textContent = "Error cargando datos.";
+  }
+});
+</script>
+
+<style>
+.btn-home {
+  display: inline-block;
+  background: #005fa3;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-decoration: none;
+  margin-top: 10px;
+}
+.btn-home:hover {
+  background: #003d80;
+}
+</style>
 
 </body>
-
 </html>

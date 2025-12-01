@@ -11,31 +11,38 @@ class Reservacion extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'FechaInicio', 'FechaFin', 'PrecioTotal', 'NumHuespedes', 'NumHabitaciones',
-        'IdHotel', 'IdTransporte', 'Estatus'
+        'FechaInicio',
+        'FechaFin',
+        'PrecioTotal',
+        'NumHuespedes',
+        'NumHabitaciones',
+        'IdHotel',
+        'IdTransporte',
+        'IdHabitacion', // 👈 IMPORTANTE
+        'Estatus'
     ];
 
-    protected $casts = [
-        'FechaInicio' => 'date',
-        'FechaFin' => 'date',
-        'PrecioTotal' => 'float',
-        'NumHuespedes' => 'integer',
-        'NumHabitaciones' => 'integer',
-    ];
+    // 🔹 RELACIÓN CON HABITACION
+    public function habitacion()
+    {
+        return $this->belongsTo(Habitacion::class, 'IdHabitacion', 'IdHabitacion');
+    }
 
+    // 🔹 RELACIÓN CON HOTEL
     public function hotel()
     {
         return $this->belongsTo(Hotel::class, 'IdHotel', 'IdHotel');
     }
 
+    // 🔹 RELACIÓN CON TRANSPORTE
     public function transporte()
     {
         return $this->belongsTo(Transporte::class, 'IdTransporte', 'IdTransporte');
     }
 
+    // 🔹 RELACIÓN muchos-a-muchos con usuarios
     public function usuarios()
     {
         return $this->belongsToMany(Usuario::class, 'Usuario_Reservacion', 'IdReservacion', 'IdUsuario');
     }
 }
-

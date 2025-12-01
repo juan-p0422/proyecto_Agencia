@@ -1,109 +1,141 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="utf-8" />
-  <title>Mi Perfil</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <title>Mi Perfil</title>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <header>
-    <h1>Mi Perfil</h1>
-    <nav id="menu"></nav>
-  </header>
 
-  <main>
-    <section>
-      <h2>Datos</h2>
-      <div id="userInfo"></div>
-    </section>
+    <header>
+        <a href="index.html" class="btn-home">← Volver al inicio</a>
+        <h1>Mi Perfil</h1>
+        <nav id="menu"></nav>
+    </header>
 
-    <section>
-      <h2>Mis Reservaciones</h2>
-      <div id="misReservaciones" class="grid"></div>
-      <p id="noRes" style="display:none;">No tienes reservaciones.</p>
-    </section>
-  </main>
+    <main class="centered" style="max-width: 900px;">
+        <h2>Mis Reservaciones</h2>
+        <div id="reservas"></div>
+        <p id="msg" style="font-weight:bold; color:darkred;"></p>
+    </main>
 
-  <script src="api.js"></script>
-  <script src="auth.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-      renderMenu();
-      const user = getCurrentUser();
-      const userDiv = document.getElementById("userInfo");
-      const reservasDiv = document.getElementById("misReservaciones");
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
 
-      if (!user) {
-        userDiv.innerHTML = "<p>No has iniciado sesión. <a href='login.html'>Inicia sesión</a></p>";
-        return;
-      }
+    <script>
+        // Llama al backend para obtener TODAS las reservaciones
+        async function fetchReservaciones() {
+            const res = await fetch(`${API_URL}reservaciones`);
+            return await res.json();
+        }
 
-      userDiv.innerHTML = `<p><strong>Nombre:</strong> ${user.Nombre}</p><p><strong>Correo:</strong> ${user.Correo}</p>`;
+        // Cancelar una reservación
+        async function cancelarReserva(id) {
+            if (!confirm("¿Seguro que deseas cancelar esta reservación?")) return;
 
-      reservasDiv.innerHTML = "Cargando...";
+            const res = await fetch(`${API_URL}reservaciones/${id}/cancelar`, {
+                method: "PATCH"
+            });
 
-      try {
-        const reservas = await fetchReservaciones();
-        // filtramos: aquellas reservas a las que el usuario está asociado.
-        const mis = [];
-        for (const r of reservas) {
-          try {
-            const usuarios = await fetchReservacionUsuarios(r.IdReservacion);
-            if (usuarios && usuarios.some(u => Number(u.IdUsuario) === Number(user.IdUsuario))) {
-              // añadir info útil: hotel y transporte
-              mis.push(r);
+            if (!res.ok) {
+                alert("No se pudo cancelar la reservación");
+                return;
             }
-          } catch (e) {
-            console.error("Error comprobando usuarios para reservación", r.IdReservacion, e);
-          }
+
+            alert("Reservación cancelada");
+            location.reload(); // refrescar lista
         }
 
-        if (mis.length === 0) {
-          reservasDiv.innerHTML = "";
-          document.getElementById("noRes").style.display = "block";
-          return;
+        document.addEventListener("DOMContentLoaded", async () => {
+            renderMenu();
+
+            const usuario = getCurrentUser();
+            const reservasContainer = document.getElementById("reservas");
+            const msg = document.getElementById("msg");
+
+            if (!usuario) {
+                msg.textContent = "Debes iniciar sesión para ver tus reservaciones.";
+                return;
+            }
+
+            try {
+                const reservas = await fetchReservaciones();
+
+                // Filtrar por el usuario actual ↴
+                const misReservas = reservas.filter(r =>
+                    r.usuarios.some(u => u.IdUsuario === usuario.IdUsuario)
+                );
+
+                if (misReservas.length === 0) {
+                    reservasContainer.innerHTML = "<p>No tienes reservaciones aún.</p>";
+                    return;
+                }
+
+                reservasContainer.innerHTML = misReservas.map(r => {
+
+                    const habitacion = r.habitacion ?? {};
+                    const hotel = r.hotel ?? {};
+                    const transporte = r.transporte ?? {};
+                    const fechaInicio = r.FechaInicio.split("T")[0];
+                    const fechaFin = r.FechaFin.split("T")[0];
+
+                    const botonCancelar =
+                        r.Estatus === "Cancelada"
+                            ? `<button disabled>Cancelada</button>`
+                            : `<button onclick="cancelarReserva(${r.IdReservacion})">Cancelar</button>`;
+
+                    return `
+        <div class="reserva-card">
+          <h3>Hotel ${hotel.NombreHotel ?? ""}</h3>
+          <p><strong>Habitación:</strong> ${habitacion.TipoHabitacion ?? "N/A"}</p>
+          <p><strong>Fechas:</strong> ${fechaInicio} → ${fechaFin}</p>
+          <p><strong>No. Habitaciones:</strong> ${r.NumHabitaciones}</p>
+          <p><strong>Precio Total:</strong> $${r.PrecioTotal}</p>
+          <p><strong>Estatus:</strong> ${r.Estatus}</p>
+          <p><strong>Transporte:</strong> ${transporte.TipoTransporte ?? "N/A"}</p>
+          ${botonCancelar}
+        </div>
+      `;
+                }).join("");
+
+            } catch (error) {
+                console.error(error);
+                msg.textContent = "Error cargando reservaciones.";
+            }
+        });
+    </script>
+
+    <style>
+        /* Mejor estética básica */
+        .reserva-card {
+            border: 2px solid #0066cc;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 12px;
+            background-color: #f8fbff;
         }
 
-        // obtener hoteles y transportes para mostrar nombres
-        const hoteles = await fetchHoteles();
-        const transportes = await fetchTransportes();
+        .reserva-card h3 {
+            color: #003d80;
+        }
 
-        reservasDiv.innerHTML = mis.map(r => {
-          const hotel = hoteles.find(h => Number(h.IdHotel) === Number(r.IdHotel));
-          const transporte = transportes.find(t => Number(t.IdTransporte) === Number(r.IdTransporte));
-          return `
-            <div class="card">
-              <h4>Reserva #${r.IdReservacion} — ${r.Estatus}</h4>
-              <p><strong>Hotel:</strong> ${hotel ? hotel.NombreHotel : r.IdHotel}</p>
-              <p><strong>Fechas:</strong> ${r.FechaInicio} → ${r.FechaFin}</p>
-              <p><strong>Huéspedes:</strong> ${r.NumHuespedes} | <strong>Habitaciones:</strong> ${r.NumHabitaciones}</p>
-              <p><strong>Transporte:</strong> ${transporte ? transporte.NombreEmpresa : r.IdTransporte} — $${r.PrecioTotal}</p>
-              <div class="card-actions">
-                <button onclick="cancelReserva(${r.IdReservacion})">Cancelar</button>
-              </div>
-            </div>
-          `;
-        }).join("");
+        .reserva-card button {
+            background-color: #d9534f;
+            border: none;
+            padding: 8px 14px;
+            color: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
 
-      } catch (err) {
-        console.error(err);
-        reservasDiv.innerHTML = "<p>Error al cargar reservaciones.</p>";
-      }
-    });
+        .reserva-card button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+    </style>
 
-    async function cancelReserva(id) {
-      if (!confirm("¿Deseas cancelar esta reservación?")) return;
-      try {
-        // Hacemos DELETE (o PUT cambiando Estatus) según lo que acepte tu API.
-        // Intentaremos PUT cambiando Estatus a 'Cancelada' (más seguro si la API no permite DELETE).
-        await apiPut(`reservaciones/${id}`, { Estatus: "Cancelada" });
-        alert("Reservación cancelada.");
-        location.reload();
-      } catch (err) {
-        console.error(err);
-        alert("Error cancelando reservación. Intenta nuevamente.");
-      }
-    }
-  </script>
 </body>
+
 </html>

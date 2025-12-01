@@ -1,88 +1,117 @@
-// Manejo de sesión simple con localStorage.
-// Guardamos el objeto usuario tal cual devuelve la API (ej: { IdUsuario, Nombre, Correo })
-
 function getCurrentUser() {
-  try {
-    return JSON.parse(localStorage.getItem("usuario"));
-  } catch (e) {
-    return null;
-  }
+    try {
+        return JSON.parse(localStorage.getItem("usuario"));
+    } catch {
+        return null;
+    }
 }
 
+// Actualiza menú según estado auth
 function renderMenu() {
-  const menu = document.getElementById("menu");
-  if (!menu) return;
-  const user = getCurrentUser();
-  if (user) {
-    menu.innerHTML = `
-      <span class="menu-username">Hola, ${user.Nombre}</span>
+    const menu = document.getElementById("menu");
+    if (!menu) return;
+
+    const user = getCurrentUser();
+
+    if (user) {
+        menu.innerHTML = `
+      <span>Hola, ${user.Nombre}</span>
       <a href="perfil.html">Mi perfil</a>
-      <a href="hoteles.html">Hoteles</a>
-      <a href="#" id="logoutLink">Cerrar sesión</a>
+      <a href="#" onclick="logout()">Cerrar sesión</a>
     `;
-    document.getElementById("logoutLink").addEventListener("click", (e) => {
-      e.preventDefault();
-      logout();
-    });
-  } else {
-    menu.innerHTML = `
-      <a href="login.html">Iniciar sesión</a>
+    } else {
+        menu.innerHTML = `
+      <a href="login.html">Iniciar Sesión</a>
       <a href="register.html">Registrarse</a>
-      <a href="hoteles.html">Hoteles</a>
     `;
-  }
+    }
 }
 
 function logout() {
-  localStorage.removeItem("usuario");
-  location.href = "index.html";
+    localStorage.removeItem("usuario");
+    location.href = "index.html";
 }
 
-/* Login simple por correo (usa GET /api/usuarios y busca por Correo) */
 document.addEventListener("DOMContentLoaded", () => {
-  renderMenu();
 
-  const loginForm = document.getElementById("loginForm");
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const correo = document.getElementById("correo").value.trim();
-      try {
-        const usuarios = await apiGet("usuarios");
-        const found = usuarios.find(u => String(u.Correo).toLowerCase() === correo.toLowerCase());
-        if (!found) {
-          alert("Correo no registrado. Por favor regístrate.");
-          return;
-        }
-        localStorage.setItem("usuario", JSON.stringify(found));
-        location.href = "index.html";
-      } catch (err) {
-        console.error(err);
-        alert("Error intentando iniciar sesión.");
-      }
-    });
-  }
+    renderMenu();
 
-  const registerForm = document.getElementById("registerForm");
-  if (registerForm) {
-    registerForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const nombre = document.getElementById("nombre").value.trim();
-      const correo = document.getElementById("correo").value.trim();
-      try {
-        const created = await apiPost("usuarios", { Nombre: nombre, Correo: correo });
-        // asumimos la API regresa el usuario creado con IdUsuario
-        localStorage.setItem("usuario", JSON.stringify(created));
-        location.href = "index.html";
-      } catch (err) {
-        console.error(err);
-        alert("Error registrando usuario.");
-      }
-    });
-  }
+    const loginForm = document.getElementById("loginForm");
+    if (loginForm) {
+        loginForm.addEventListener("submit", async e => {
+            e.preventDefault();
+
+            const correo = document.getElementById("correo").value;
+            const password = document.getElementById("password").value;
+
+            try {
+                const usuario = await apiPost("login", {
+                    Correo: correo,
+                    Password: password
+                });
+
+                localStorage.setItem("usuario", JSON.stringify(usuario));
+                location.href = "index.html";
+
+            } catch (err) {
+                alert("Credenciales incorrectas");
+            }
+        });
+    }
+
+    const registerForm = document.getElementById("registerForm");
+    if (registerForm) {
+        registerForm.addEventListener("submit", async e => {
+            e.preventDefault();
+
+            const nombre = document.getElementById("nombre").value;
+            const correo = document.getElementById("correo").value;
+            const password = document.getElementById("password").value;
+            const password2 = document.getElementById("password2").value;
+
+            if (password !== password2) {
+                alert("Las contraseñas no coinciden");
+                return;
+            }
+
+            try {
+                const usuario = await apiPost("usuarios", {
+                    Nombre: nombre,
+                    Correo: correo,
+                    Password: password
+                });
+
+                // Se auto loguea
+                localStorage.setItem("usuario", JSON.stringify(usuario));
+                location.href = "index.html";
+
+            } catch (err) {
+                try {
+                    const errorData = await err.json();
+
+                    // Detectar si el error es por longitud de contraseña
+                    if (errorData.errors && errorData.errors.Password) {
+                        alert("La contraseña debe tener al menos 8 caracteres.");
+                        return;
+                    }
+
+                    // Detectar si el correo ya está registrado
+                    if (errorData.errors && errorData.errors.Correo) {
+                        alert("El correo ya está registrado.");
+                        return;
+                    }
+
+                    // Otros errores de validación
+                    if (errorData.message) {
+                        alert(errorData.message);
+                    } else {
+                        alert("Error al registrarse. Verifica tus datos.");
+                    }
+
+                } catch {
+                    alert("Error al registrarse. Verifica tus datos.");
+                }
+            }
+        });
+    }
 });
-
-// Exponer utilidades globalmente
-window.getCurrentUser = getCurrentUser;
-window.renderMenu = renderMenu;
-window.logout = logout;

@@ -23,6 +23,10 @@ Route::apiResource('reservaciones', ReservacionController::class);
 Route::get('reservaciones/{id}/usuarios', [UsuarioReservacionController::class, 'indexByReservacion']);
 Route::post('reservaciones/{id}/usuarios/attach', [UsuarioReservacionController::class, 'attach']);
 Route::post('reservaciones/{id}/usuarios/detach', [UsuarioReservacionController::class, 'detach']);
+Route::post('/login', [UsuarioController::class, 'login']);
+
+Route::patch('reservaciones/{id}/cancelar', [ReservacionController::class, 'cancelar']);
+
 
 
 

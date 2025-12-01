@@ -312,3 +312,17 @@ ALTER TABLE Usuario
 
 ----------------------------------------------------------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------------
+
+Modificar tabla de Reservacion
+
+-------------------------------------------------------------------------------------
+
+ALTER TABLE Reservacion
+ADD COLUMN IdHabitacion INT NOT NULL;
+
+ALTER TABLE Reservacion
+ADD CONSTRAINT fk_res_hab
+FOREIGN KEY (IdHabitacion) REFERENCES Habitacion(IdHabitacion)
+ON UPDATE CASCADE
+ON DELETE RESTRICT;
