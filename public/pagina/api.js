@@ -1,92 +1,157 @@
-const API_URL = "http://127.0.0.1:8000/api/";
+// api.js
+window.API_URL = window.API_URL || "http://127.0.0.1:8000/api/";
 
-/* básicos */
-async function apiGet(endpoint) {
-  const res = await fetch(API_URL + endpoint);
-  if (!res.ok) throw new Error(`GET ${endpoint} -> ${res.status}`);
-  return res.json();
+/* =========
+   Auth / sesión
+   ========= */
+function getToken() {
+  return localStorage.getItem("token");
 }
 
-async function apiPost(endpoint, data) {
-  const res = await fetch(API_URL + endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) throw new Error(`POST ${endpoint} -> ${res.status}`);
-  return res.json();
+function authHeaders() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function apiPut(endpoint, data) {
-  const res = await fetch(API_URL + endpoint, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) throw new Error(`PUT ${endpoint} -> ${res.status}`);
-  return res.json();
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("usuario"));
+  } catch {
+    return null;
+  }
 }
 
-async function apiDelete(endpoint) {
-  const res = await fetch(API_URL + endpoint, { method: "DELETE" });
-  if (!res.ok) throw new Error(`DELETE ${endpoint} -> ${res.status}`);
-  return res.json();
+function logout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("usuario");
+  localStorage.removeItem("pending_2fa");
+  localStorage.removeItem("enroll_2fa");
+  location.href = "index.html";
 }
 
-/* helpers para recursos específicos */
-async function fetchHoteles() {
-  return apiGet("hoteles");
+function renderMenu() {
+  const menu = document.getElementById("menu");
+  if (!menu) return;
+
+  const user = getCurrentUser();
+
+  if (user) {
+    menu.innerHTML = `
+      <span>Hola, ${user.Nombre ?? "Usuario"}</span>
+      <a href="perfil.html">Mi perfil</a>
+      <a href="#" id="logoutLink">Cerrar sesión</a>
+    `;
+    const link = document.getElementById("logoutLink");
+    if (link) link.addEventListener("click", (e) => { e.preventDefault(); logout(); });
+  } else {
+    menu.innerHTML = `
+      <a href="login.html">Iniciar Sesión</a>
+      <a href="register.html">Registrarse</a>
+    `;
+  }
 }
 
-async function fetchHabitaciones() {
-  return apiGet("habitaciones");
+/* =========
+   HTTP helper (con parseo de errores)
+   ========= */
+async function parseBody(res) {
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (res.status === 204) return null;
+
+  if (ct.includes("application/json")) {
+    try { return await res.json(); } catch { return null; }
+  }
+  try { return await res.text(); } catch { return null; }
 }
 
-async function fetchTransportes() {
-  return apiGet("transportes");
+function extractMessage(body, fallback) {
+  if (!body) return fallback;
+  if (typeof body === "string") return body;
+  if (body.message) return body.message;
+
+  if (body.errors && typeof body.errors === "object") {
+    const firstKey = Object.keys(body.errors)[0];
+    if (firstKey && Array.isArray(body.errors[firstKey]) && body.errors[firstKey][0]) {
+      return body.errors[firstKey][0];
+    }
+  }
+  return fallback;
 }
 
-async function fetchDescuentos() {
-  return apiGet("descuentos");
+function buildError(res, body, endpoint) {
+  const fallback = `${res.status} ${res.statusText} -> ${endpoint}`;
+  const err = new Error(extractMessage(body, fallback));
+  err.status = res.status;
+  err.body = body;
+  err.endpoint = endpoint;
+  return err;
 }
 
-async function fetchReservaciones() {
-  return apiGet("reservaciones");
+async function apiRequest(endpoint, { method = "GET", body = null, headers = {} } = {}) {
+  const url = window.API_URL + endpoint;
+
+  const finalHeaders = {
+    Accept: "application/json",
+    ...authHeaders(),
+    ...headers,
+  };
+
+  const fetchOptions = { method, headers: finalHeaders };
+
+  if (body !== null && body !== undefined) {
+    if (body instanceof FormData) {
+      fetchOptions.body = body;
+    } else if (typeof body === "object") {
+      fetchOptions.headers = {
+        "Content-Type": "application/json",
+        ...fetchOptions.headers,
+      };
+      fetchOptions.body = JSON.stringify(body);
+    } else {
+      fetchOptions.body = body;
+    }
+  }
+
+  const res = await fetch(url, fetchOptions);
+  const parsed = await parseBody(res);
+
+  if (!res.ok) throw buildError(res, parsed, `${method} ${endpoint}`);
+  return parsed;
 }
 
+async function apiGet(endpoint) { return apiRequest(endpoint, { method: "GET" }); }
+async function apiPost(endpoint, data) { return apiRequest(endpoint, { method: "POST", body: data ?? {} }); }
+async function apiPut(endpoint, data) { return apiRequest(endpoint, { method: "PUT", body: data ?? {} }); }
+async function apiDelete(endpoint) { return apiRequest(endpoint, { method: "DELETE" }); }
+
+/* =========
+   Helpers para recursos (compatibles con tu index “original”)
+   ========= */
+async function fetchHoteles() { return apiGet("hoteles"); }
+async function fetchHabitaciones() { return apiGet("habitaciones"); }
+async function fetchTransportes() { return apiGet("transportes"); }
+async function fetchDescuentos() { return apiGet("descuentos"); }
+async function fetchReservaciones() { return apiGet("reservaciones"); }
 async function fetchReservacionUsuarios(idReservacion) {
   return apiGet(`reservaciones/${idReservacion}/usuarios`);
 }
 
-/* acciones: crear reservación y asociar usuario */
 async function createReservacion(body) {
-  // body debe tener: FechaInicio, FechaFin, PrecioTotal, NumHuespedes, NumHabitaciones, IdHotel, IdTransporte, Estatus
   return apiPost("reservaciones", body);
 }
 
 async function attachUsuarioToReservacion(reservacionId, usuarioId) {
-    const res = await fetch(`${API_URL}reservaciones/${reservacionId}/usuarios/attach`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            IdUsuario: usuarioId   // <-- ahora se envía en formato correcto
-        })
-    });
-
-    // Intentar parsear JSON
-    try {
-        return await res.json();
-    } catch (e) {
-        console.error("La API respondió con algo que no es JSON:", e);
-        return null;
-    }
+  return apiPost(`reservaciones/${reservacionId}/usuarios/attach`, { IdUsuario: usuarioId });
 }
 
 async function detachUsuarioFromReservacion(idReservacion, idUsuario) {
   return apiPost(`reservaciones/${idReservacion}/usuarios/detach`, { IdUsuario: idUsuario });
 }
 
-/* exportamos en ambiente no-module (global) */
+/* =========
+   Exports globales
+   ========= */
+window.apiRequest = apiRequest;
 window.apiGet = apiGet;
 window.apiPost = apiPost;
 window.apiPut = apiPut;
@@ -102,3 +167,7 @@ window.fetchReservacionUsuarios = fetchReservacionUsuarios;
 window.createReservacion = createReservacion;
 window.attachUsuarioToReservacion = attachUsuarioToReservacion;
 window.detachUsuarioFromReservacion = detachUsuarioFromReservacion;
+
+window.getCurrentUser = getCurrentUser;
+window.renderMenu = renderMenu;
+window.logout = logout;

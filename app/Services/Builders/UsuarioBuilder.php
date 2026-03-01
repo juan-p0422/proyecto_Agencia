@@ -3,7 +3,6 @@
 namespace App\Services\Builders;
 
 use App\Models\Usuario;
-use Illuminate\Support\Facades\Hash;
 
 class UsuarioBuilder
 {
@@ -23,7 +22,8 @@ class UsuarioBuilder
 
     public function setPassword($password)
     {
-        $this->data['Password'] = Hash::make($password);
+        // ✅ NO hashear aquí. El modelo lo hashea con el mutator.
+        $this->data['Password'] = $password;
         return $this;
     }
 

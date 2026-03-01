@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Iniciar Sesión</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -20,11 +20,40 @@
     <button type="submit">Entrar</button>
   </form>
 
+  <!-- Panel: Enrolar 2FA -->
+  <section id="panelEnroll" style="display:none; margin-top:16px;">
+    <hr style="margin:16px 0;">
+    <h3>Activar 2FA (Google Authenticator)</h3>
+    <p>Escanea el QR y escribe el código de 6 dígitos.</p>
+
+    <div id="qrBox" style="margin-top:12px;"></div>
+
+    <form id="enrollForm" style="margin-top:12px;">
+      <label>Código 2FA (6 dígitos)</label>
+      <input id="enrollCode" inputmode="numeric" maxlength="6" required>
+      <button type="submit">Confirmar 2FA</button>
+    </form>
+  </section>
+
+  <!-- Panel: Login con 2FA -->
+  <section id="panelLogin2FA" style="display:none; margin-top:16px;">
+    <hr style="margin:16px 0;">
+    <h3>Verificación 2FA</h3>
+
+    <form id="login2faForm" style="margin-top:12px;">
+      <label>Código 2FA (6 dígitos)</label>
+      <input id="login2faCode" inputmode="numeric" maxlength="6" required>
+      <button type="submit">Verificar</button>
+    </form>
+  </section>
+
+  <p id="msg" style="margin-top:12px; color:darkred; font-weight:bold;"></p>
+
   <p>¿No tienes cuenta? <a href="register.html">Registrate</a></p>
 </main>
 
 <script src="api.js"></script>
+<script src="qrcode.js"></script>
 <script src="auth.js"></script>
-
 </body>
 </html>

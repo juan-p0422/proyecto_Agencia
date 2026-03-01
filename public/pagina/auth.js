@@ -1,117 +1,203 @@
-function getCurrentUser() {
-    try {
-        return JSON.parse(localStorage.getItem("usuario"));
-    } catch {
-        return null;
-    }
+// auth.js (login + 2FA, usa qrcode.js davidshimjs)
+
+function showMsg(t) {
+  const el = document.getElementById("msg");
+  if (el) el.textContent = t || "";
 }
 
-// Actualiza menú según estado auth
-function renderMenu() {
-    const menu = document.getElementById("menu");
-    if (!menu) return;
+function hidePanels() {
+  const panelEnroll = document.getElementById("panelEnroll");
+  const panelLogin2FA = document.getElementById("panelLogin2FA");
+  const qrBox = document.getElementById("qrBox");
 
-    const user = getCurrentUser();
-
-    if (user) {
-        menu.innerHTML = `
-      <span>Hola, ${user.Nombre}</span>
-      <a href="perfil.html">Mi perfil</a>
-      <a href="#" onclick="logout()">Cerrar sesión</a>
-    `;
-    } else {
-        menu.innerHTML = `
-      <a href="login.html">Iniciar Sesión</a>
-      <a href="register.html">Registrarse</a>
-    `;
-    }
+  if (panelEnroll) panelEnroll.style.display = "none";
+  if (panelLogin2FA) panelLogin2FA.style.display = "none";
+  if (qrBox) qrBox.innerHTML = "";
 }
 
-function logout() {
-    localStorage.removeItem("usuario");
-    location.href = "index.html";
+function reset2faStorage() {
+  localStorage.removeItem("pending_2fa");
+  localStorage.removeItem("enroll_2fa");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+function finishSession(resp) {
+  // Esperamos token+usuario (tu backend ya te deja entrar)
+  if (resp?.token) localStorage.setItem("token", resp.token);
+  if (resp?.usuario) localStorage.setItem("usuario", JSON.stringify(resp.usuario));
 
-    renderMenu();
+  reset2faStorage();
+  location.href = "index.html";
+}
 
-    const loginForm = document.getElementById("loginForm");
-    if (loginForm) {
-        loginForm.addEventListener("submit", async e => {
-            e.preventDefault();
+/* =========
+   QR (qrcode.js de davidshimjs)
+   ========= */
+async function drawQR(otpauthUrl) {
+  const qrBox = document.getElementById("qrBox");
+  if (!qrBox) throw new Error("No existe #qrBox en el HTML.");
 
-            const correo = document.getElementById("correo").value;
-            const password = document.getElementById("password").value;
+  qrBox.innerHTML = "";
 
-            try {
-                const usuario = await apiPost("login", {
-                    Correo: correo,
-                    Password: password
-                });
+  if (!window.QRCode || typeof window.QRCode !== "function") {
+    throw new Error("No cargó qrcode.js. Orden correcto: api.js -> qrcode.js -> auth.js");
+  }
 
-                localStorage.setItem("usuario", JSON.stringify(usuario));
-                location.href = "index.html";
+  new window.QRCode(qrBox, {
+    text: otpauthUrl,
+    width: 220,
+    height: 220,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: window.QRCode.CorrectLevel.M,
+  });
+}
 
-            } catch (err) {
-                alert("Credenciales incorrectas");
-            }
-        });
-    }
+/* =========
+   Reanudar flujos por storage
+   ========= */
+async function showEnrollFromStorageIfAny() {
+  const raw = localStorage.getItem("enroll_2fa");
+  if (!raw) return false;
 
-    const registerForm = document.getElementById("registerForm");
-    if (registerForm) {
-        registerForm.addEventListener("submit", async e => {
-            e.preventDefault();
+  try {
+    const payload = JSON.parse(raw);
+    if (!payload?.enroll_token || !payload?.otpauthUrl) return false;
 
-            const nombre = document.getElementById("nombre").value;
-            const correo = document.getElementById("correo").value;
-            const password = document.getElementById("password").value;
-            const password2 = document.getElementById("password2").value;
+    hidePanels();
+    document.getElementById("panelEnroll").style.display = "block";
+    await drawQR(payload.otpauthUrl);
+    showMsg("Escanea el QR y confirma con tu código.");
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-            if (password !== password2) {
-                alert("Las contraseñas no coinciden");
-                return;
-            }
+function showPending2faIfAny() {
+  const pending = localStorage.getItem("pending_2fa");
+  if (!pending) return false;
 
-            try {
-                const usuario = await apiPost("usuarios", {
-                    Nombre: nombre,
-                    Correo: correo,
-                    Password: password
-                });
+  hidePanels();
+  document.getElementById("panelLogin2FA").style.display = "block";
+  showMsg("Ingresa tu código 2FA.");
+  return true;
+}
 
-                // Se auto loguea
-                localStorage.setItem("usuario", JSON.stringify(usuario));
-                location.href = "index.html";
+/* =========
+   Inicio
+   ========= */
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    if (await showEnrollFromStorageIfAny()) return;
+  } catch (e) {
+    console.error(e);
+    showMsg(e.message || "Error mostrando QR.");
+    reset2faStorage();
+  }
 
-            } catch (err) {
-                try {
-                    const errorData = await err.json();
+  if (showPending2faIfAny()) return;
 
-                    // Detectar si el error es por longitud de contraseña
-                    if (errorData.errors && errorData.errors.Password) {
-                        alert("La contraseña debe tener al menos 8 caracteres.");
-                        return;
-                    }
+  // LOGIN
+  const loginForm = document.getElementById("loginForm");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMsg("");
+      hidePanels();
 
-                    // Detectar si el correo ya está registrado
-                    if (errorData.errors && errorData.errors.Correo) {
-                        alert("El correo ya está registrado.");
-                        return;
-                    }
+      const correo = document.getElementById("correo").value.trim();
+      const password = document.getElementById("password").value;
 
-                    // Otros errores de validación
-                    if (errorData.message) {
-                        alert(errorData.message);
-                    } else {
-                        alert("Error al registrarse. Verifica tus datos.");
-                    }
+      try {
+        const resp = await apiPost("login", { Correo: correo, Password: password });
 
-                } catch {
-                    alert("Error al registrarse. Verifica tus datos.");
-                }
-            }
-        });
-    }
+        if (resp.two_factor_required) {
+          localStorage.setItem("pending_2fa", resp.pending_token);
+          document.getElementById("panelLogin2FA").style.display = "block";
+          showMsg("Ingresa tu código 2FA.");
+          return;
+        }
+
+        if (resp.enroll_required) {
+          localStorage.setItem("enroll_2fa", JSON.stringify({
+            enroll_token: resp.enroll_token,
+            otpauthUrl: resp.otpauthUrl,
+          }));
+
+          document.getElementById("panelEnroll").style.display = "block";
+          await drawQR(resp.otpauthUrl);
+          showMsg("Escanea el QR y confirma con tu código.");
+          return;
+        }
+
+        if (resp.token) {
+          finishSession(resp);
+          return;
+        }
+
+        showMsg("Respuesta inesperada del servidor.");
+      } catch (err) {
+        console.error("Login error:", err);
+        showMsg(err.message || "Error al iniciar sesión.");
+      }
+    });
+  }
+
+  // CONFIRMAR ENROLAMIENTO
+  const enrollForm = document.getElementById("enrollForm");
+  if (enrollForm) {
+    enrollForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMsg("");
+
+      let enroll_token = null;
+      try { enroll_token = JSON.parse(localStorage.getItem("enroll_2fa"))?.enroll_token; } catch {}
+
+      const raw = document.getElementById("enrollCode").value;
+      const code = raw.replace(/\D/g, "").slice(0, 6);
+
+      if (!enroll_token) {
+        showMsg("No existe enroll_token. Vuelve a iniciar sesión para generar el QR.");
+        hidePanels();
+        reset2faStorage();
+        return;
+      }
+
+      try {
+        const resp = await apiPost("2fa/enroll/confirm", { enroll_token, code });
+        finishSession(resp);
+      } catch (err) {
+        console.error("Enroll confirm error:", err);
+        showMsg(err.message || "Código inválido o expirado.");
+      }
+    });
+  }
+
+  // VERIFICACIÓN 2FA EN LOGIN
+  const login2faForm = document.getElementById("login2faForm");
+  if (login2faForm) {
+    login2faForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMsg("");
+
+      const pending_token = localStorage.getItem("pending_2fa");
+      const raw = document.getElementById("login2faCode").value;
+      const code = raw.replace(/\D/g, "").slice(0, 6);
+
+      if (!pending_token) {
+        showMsg("No existe pending_token. Vuelve a iniciar sesión.");
+        hidePanels();
+        reset2faStorage();
+        return;
+      }
+
+      try {
+        const resp = await apiPost("login/2fa", { pending_token, code });
+        finishSession(resp);
+      } catch (err) {
+        console.error("Login2FA error:", err);
+        showMsg(err.message || "Código inválido o expirado.");
+      }
+    });
+  }
 });

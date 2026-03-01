@@ -6,13 +6,15 @@ use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use App\Services\Builders\UsuarioBuilder;
 
 class UsuarioController extends Controller
 {
     public function index()
     {
-        return response()->json(Usuario::all());
+        return response()->json(Usuario::query()->get()->makeHidden(['Password']));
     }
 
     public function show($id)
@@ -21,7 +23,8 @@ class UsuarioController extends Controller
         if (!$usuario) {
             return response()->json(['mensaje' => 'No encontrado'], 404);
         }
-        return response()->json($usuario);
+
+        return response()->json($usuario->makeHidden(['Password']));
     }
 
     public function store(Request $request)
@@ -29,18 +32,18 @@ class UsuarioController extends Controller
         $data = $request->validate([
             'Nombre' => ['required', 'string', 'max:100'],
             'Correo' => ['required', 'email', 'max:150', 'unique:Usuario,Correo'],
-            'Password' => ['required', 'string', 'min:8']
+            'Password' => ['required', 'string', 'min:8'],
         ]);
 
+        // ✅ NO hashear aquí. El modelo (mutator) lo hace una sola vez.
         $usuario = (new UsuarioBuilder())
             ->setNombre($data['Nombre'])
             ->setCorreo($data['Correo'])
-            ->setPassword($data['Password'])
+            ->setPassword($data['Password']) // texto plano
             ->build();
 
-        return response()->json($usuario, 201);
+        return response()->json($usuario->makeHidden(['Password']), 201);
     }
-
 
     public function update(Request $request, $id)
     {
@@ -56,18 +59,15 @@ class UsuarioController extends Controller
                 'required',
                 'email',
                 'max:150',
-                Rule::unique('Usuario', 'Correo')->ignore($usuario->IdUsuario, 'IdUsuario')
+                Rule::unique('Usuario', 'Correo')->ignore($usuario->IdUsuario, 'IdUsuario'),
             ],
-            'Password' => ['sometimes', 'required', 'string', 'min:8']
+            'Password' => ['sometimes', 'required', 'string', 'min:8'],
         ]);
 
-        if (isset($data['Password'])) {
-            $data['Password'] = Hash::make($data['Password']);
-        }
-
+        // ✅ NO hashear aquí tampoco. El mutator del modelo lo hará.
         $usuario->update($data);
 
-        return response()->json($usuario);
+        return response()->json($usuario->fresh()->makeHidden(['Password']));
     }
 
     public function destroy($id)
@@ -85,14 +85,35 @@ class UsuarioController extends Controller
     {
         $data = $request->validate([
             'Correo' => ['required', 'email'],
-            'Password' => ['required']
+            'Password' => ['required'],
         ]);
 
         $usuario = Usuario::where('Correo', $data['Correo'])->first();
+
         if (!$usuario || !Hash::check($data['Password'], $usuario->Password)) {
             return response()->json(['mensaje' => 'Credenciales inválidas'], 401);
         }
 
-        return response()->json($usuario);
+        // ✅ Corregido: tus columnas reales están en snake_case
+        $twoFactorEnabled =
+            !empty($usuario->two_factor_secret)
+            && !empty($usuario->two_factor_confirmed_at);
+
+        if ($twoFactorEnabled) {
+            $pending = (string) Str::uuid();
+            Cache::put("2fa:pending:{$pending}", $usuario->IdUsuario, now()->addMinutes(5));
+
+            return response()->json([
+                'two_factor_required' => true,
+                'pending_token' => $pending,
+            ]);
+        }
+
+        $token = $usuario->createToken('api')->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'usuario' => $usuario->makeHidden(['Password']),
+        ]);
     }
 }

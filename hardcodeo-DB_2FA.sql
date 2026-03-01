@@ -1,0 +1,332 @@
+//Hardcodeo de la base de datos desde 0
+
+
+
+CREATE TABLE Usuario (
+    IdUsuario INT PRIMARY KEY AUTO_INCREMENT,
+    Nombre VARCHAR(100) NOT NULL,
+    Correo VARCHAR(150) UNIQUE NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Hotel (
+    IdHotel INT PRIMARY KEY AUTO_INCREMENT,
+    NombreHotel VARCHAR(100) NOT NULL,
+    Ubicacion VARCHAR(150) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Habitacion (
+    IdHabitacion INT PRIMARY KEY AUTO_INCREMENT,
+    IdHotel INT NOT NULL,
+    TipoHabitacion ENUM('Sencilla', 'Doble', 'Suite') NOT NULL,
+    Precio FLOAT NOT NULL,
+    MaximoHuespedes INT NOT NULL,
+    FOREIGN KEY (IdHotel) REFERENCES Hotel(IdHotel) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE Transporte (
+    IdTransporte INT PRIMARY KEY AUTO_INCREMENT,
+    TipoTransporte ENUM('Autobus', 'Avion') NOT NULL,
+    PrecioPorPersona FLOAT NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Descuento (
+    IdDescuento INT PRIMARY KEY AUTO_INCREMENT,
+    TipoHuesped ENUM('Adulto', 'Niño') NOT NULL,
+    PorcentajeDescuento FLOAT NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE Reservacion (
+    IdReservacion INT PRIMARY KEY AUTO_INCREMENT,
+    FechaInicio DATE NOT NULL,
+    FechaFin DATE NOT NULL,
+    PrecioTotal FLOAT NOT NULL,
+    NumHuespedes INT NOT NULL,
+    NumHabitaciones INT NOT NULL,
+    IdHotel INT NOT NULL,
+    IdTransporte INT NOT NULL,
+    Estatus ENUM('Activa', 'Inactiva', 'Cancelada') NOT NULL,
+    FOREIGN KEY (IdHotel) REFERENCES Hotel(IdHotel) ON DELETE CASCADE,
+    FOREIGN KEY (IdTransporte) REFERENCES Transporte(IdTransporte) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE Usuario_Reservacion (
+    IdUsuario INT NOT NULL,
+    IdReservacion INT NOT NULL,
+    PRIMARY KEY (IdUsuario, IdReservacion),
+    FOREIGN KEY (IdUsuario) REFERENCES Usuario(IdUsuario) ON DELETE CASCADE,
+    FOREIGN KEY (IdReservacion) REFERENCES Reservacion(IdReservacion) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+ALTER TABLE Transporte
+ADD COLUMN NombreEmpresa VARCHAR(120) NOT NULL DEFAULT 'Sin Asignar',
+ADD INDEX idx_transporte_empresa (NombreEmpresa);
+
+
+ALTER TABLE Descuento
+MODIFY COLUMN TipoHuesped ENUM('Adulto','Niño','AdultoMayor') NOT NULL;
+
+
+
+INSERT INTO Hotel (NombreHotel, Ubicacion) VALUES
+  ('Hotel Catedral Guadalajara', 'Guadalajara, Jalisco'),
+  ('Hotel Chapultepec Boutique', 'Guadalajara, Jalisco'),
+  ('Hotel Zapopan Plaza', 'Zapopan, Jalisco'),
+  ('Hotel Tlaquepaque Colonial', 'Tlaquepaque, Jalisco'),
+  ('Hotel Tonalá Tradición', 'Tonalá, Jalisco'),
+  ('Hotel Tequila Real', 'Tequila, Jalisco'),
+  ('Hotel Amatitán Hacienda', 'Amatitán, Jalisco'),
+  ('Hotel Puerto Vallarta Malecón', 'Puerto Vallarta, Jalisco'),
+  ('Hotel Marina Vallarta', 'Puerto Vallarta, Jalisco'),
+  ('Hotel Nuevo Vallarta Bahía', 'Nuevo Vallarta, Nayarit/Jalisco'),
+  ('Hotel Ajijic Lago', 'Ajijic, Chapala, Jalisco'),
+  ('Hotel Chapala Ribera', 'Chapala, Jalisco'),
+  ('Hotel Mazamitla Bosque', 'Mazamitla, Jalisco'),
+  ('Hotel Tapalpa Cabañas', 'Tapalpa, Jalisco'),
+  ('Hotel Sayulita Surf', 'Sayulita, Nayarit/Jalisco'),
+  ('Hotel San Juan de los Lagos Basílica', 'San Juan de los Lagos, Jalisco'),
+  ('Hotel Lagos de Moreno Centro', 'Lagos de Moreno, Jalisco'),
+  ('Hotel Arandas Azul', 'Arandas, Jalisco'),
+  ('Hotel La Barca Rivera', 'La Barca, Jalisco'),
+  ('Hotel Ocotlán Industrial', 'Ocotlán, Jalisco'),
+  ('Hotel Autlán Sierra', 'Autlán de Navarro, Jalisco'),
+  ('Hotel Ciudad Guzmán Nevado', 'Ciudad Guzmán (Zapotlán el Grande), Jalisco'),
+  ('Hotel Tepatitlán Altos', 'Tepatitlán, Jalisco'),
+  ('Hotel Ameca Valle', 'Ameca, Jalisco'),
+  ('Hotel Talpa del Allende Santuario', 'Talpa de Allende, Jalisco'),
+  ('Hotel Mascota Tradicional', 'Mascota, Jalisco'),
+  ('Hotel Etzatlán Histórico', 'Etzatlán, Jalisco'),
+  ('Hotel Yahualica Tradición', 'Yahualica, Jalisco'),
+  ('Hotel Teuchitlán Guachimontones', 'Teuchitlán, Jalisco'),
+  ('Hotel Barra de Navidad Costa', 'Barra de Navidad, Jalisco');
+
+
+INSERT INTO Habitacion (IdHotel, TipoHabitacion, Precio, MaximoHuespedes) VALUES
+(1, 'Sencilla', 1350.00, 2), (1, 'Doble', 1950.00, 4), (1, 'Suite', 3450.00, 8),
+(2, 'Sencilla', 1450.00, 2), (2, 'Doble', 2100.00, 4), (2, 'Suite', 3650.00, 8),
+(3, 'Sencilla', 1300.00, 2), (3, 'Doble', 1850.00, 4), (3, 'Suite', 3300.00, 8),
+(4, 'Sencilla', 1200.00, 2), (4, 'Doble', 1750.00, 4), (4, 'Suite', 3200.00, 8),
+(5, 'Sencilla', 1100.00, 2), (5, 'Doble', 1650.00, 4), (5, 'Suite', 3000.00, 8),
+(6, 'Sencilla', 1600.00, 2), (6, 'Doble', 2300.00, 4), (6, 'Suite', 4000.00, 8),
+(7, 'Sencilla', 1500.00, 2), (7, 'Doble', 2200.00, 4), (7, 'Suite', 3850.00, 8),
+(8, 'Sencilla', 2200.00, 2), (8, 'Doble', 3200.00, 4), (8, 'Suite', 5200.00, 10),
+(9, 'Sencilla', 2400.00, 2), (9, 'Doble', 3400.00, 4), (9, 'Suite', 5600.00, 10),
+(10, 'Sencilla', 2100.00, 2), (10, 'Doble', 3100.00, 4), (10, 'Suite', 5200.00, 10),
+(11, 'Sencilla', 1750.00, 2), (11, 'Doble', 2550.00, 4), (11, 'Suite', 4200.00, 8),
+(12, 'Sencilla', 1650.00, 2), (12, 'Doble', 2400.00, 4), (12, 'Suite', 4000.00, 8),
+(13, 'Sencilla', 1600.00, 2), (13, 'Doble', 2300.00, 4), (13, 'Suite', 3900.00, 8),
+(14, 'Sencilla', 1700.00, 2), (14, 'Doble', 2400.00, 4), (14, 'Suite', 4100.00, 8),
+(15, 'Sencilla', 2000.00, 2), (15, 'Doble', 3000.00, 4), (15, 'Suite', 5200.00, 10),
+(16, 'Sencilla', 1200.00, 2), (16, 'Doble', 1750.00, 4), (16, 'Suite', 3000.00, 8),
+(17, 'Sencilla', 1150.00, 2), (17, 'Doble', 1700.00, 4), (17, 'Suite', 2900.00, 8),
+(18, 'Sencilla', 1050.00, 2), (18, 'Doble', 1650.00, 4), (18, 'Suite', 2800.00, 8),
+(19, 'Sencilla', 1000.00, 2), (19, 'Doble', 1550.00, 4), (19, 'Suite', 2700.00, 8),
+(20, 'Sencilla', 980.00, 2), (20, 'Doble', 1500.00, 4), (20, 'Suite', 2600.00, 8),
+(21, 'Sencilla', 1150.00, 2), (21, 'Doble', 1700.00, 4), (21, 'Suite', 3000.00, 8),
+(22, 'Sencilla', 1250.00, 2), (22, 'Doble', 1850.00, 4), (22, 'Suite', 3200.00, 8),
+(23, 'Sencilla', 1300.00, 2), (23, 'Doble', 1900.00, 4), (23, 'Suite', 3300.00, 8),
+(24, 'Sencilla', 1100.00, 2), (24, 'Doble', 1650.00, 4), (24, 'Suite', 2950.00, 8),
+(25, 'Sencilla', 1500.00, 2), (25, 'Doble', 2200.00, 4), (25, 'Suite', 3800.00, 8),
+(26, 'Sencilla', 1450.00, 2), (26, 'Doble', 2150.00, 4), (26, 'Suite', 3700.00, 8),
+(27, 'Sencilla', 1000.00, 2), (27, 'Doble', 1550.00, 4), (27, 'Suite', 2800.00, 8),
+(28, 'Sencilla', 990.00, 2), (28, 'Doble', 1500.00, 4), (28, 'Suite', 2700.00, 8),
+(29, 'Sencilla', 1300.00, 2), (29, 'Doble', 1950.00, 4), (29, 'Suite', 3400.00, 8),
+(30, 'Sencilla', 2100.00, 2), (30, 'Doble', 3100.00, 4), (30, 'Suite', 5200.00, 10);
+
+-- Autobús
+('Autobus', 350.00, 'Primera Plus'),
+('Autobus', 450.00, 'ETN'),
+('Autobus', 550.00, 'Vallarta Plus'),
+('Autobus', 650.00, 'Omnibus de México'),
+('Autobus', 750.00, 'TAP'),
+('Autobus', 850.00, 'Primera Plus'),
+('Autobus', 950.00, 'ETN'),
+-- Avión
+('Avion', 1200.00, 'Volaris'),
+('Avion', 1600.00, 'Viva Aerobus'),
+('Avion', 2000.00, 'Aeroméxico'),
+('Avion', 2400.00, 'Volaris'),
+('Avion', 2800.00, 'Aeroméxico'),
+('Avion', 3200.00, 'Viva Aerobus');
+
+
+INSERT INTO Descuento (TipoHuesped, PorcentajeDescuento) VALUES
+('Niño', 30.00),
+('AdultoMayor', 50.00),
+('Adulto', 0.00);
+
+
+
+ALTER TABLE Habitacion
+ADD COLUMN HabitacionesTotales INT NOT NULL DEFAULT 0,
+ADD INDEX idx_habitacion_disponibilidad (IdHotel, TipoHabitacion, HabitacionesTotales);
+
+
+-- Hotel 1
+UPDATE Habitacion SET Precio=1350.00, MaximoHuespedes=2, HabitacionesTotales=20 WHERE IdHotel=1 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1950.00, MaximoHuespedes=4, HabitacionesTotales=15 WHERE IdHotel=1 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3450.00, MaximoHuespedes=8, HabitacionesTotales=8 WHERE IdHotel=1 AND TipoHabitacion='Suite';
+
+-- Hotel 2
+UPDATE Habitacion SET Precio=1450.00, MaximoHuespedes=2, HabitacionesTotales=20 WHERE IdHotel=2 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2100.00, MaximoHuespedes=4, HabitacionesTotales=15 WHERE IdHotel=2 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3650.00, MaximoHuespedes=8, HabitacionesTotales=8 WHERE IdHotel=2 AND TipoHabitacion='Suite';
+
+-- Hotel 3
+UPDATE Habitacion SET Precio=1300.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=3 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1850.00, MaximoHuespedes=4, HabitacionesTotales=14 WHERE IdHotel=3 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3300.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=3 AND TipoHabitacion='Suite';
+
+-- Hotel 4
+UPDATE Habitacion SET Precio=1200.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=4 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1750.00, MaximoHuespedes=4, HabitacionesTotales=14 WHERE IdHotel=4 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3200.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=4 AND TipoHabitacion='Suite';
+
+-- Hotel 5
+UPDATE Habitacion SET Precio=1100.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=5 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1650.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=5 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3000.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=5 AND TipoHabitacion='Suite';
+
+-- Hotel 6
+UPDATE Habitacion SET Precio=1600.00, MaximoHuespedes=2, HabitacionesTotales=22 WHERE IdHotel=6 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2300.00, MaximoHuespedes=4, HabitacionesTotales=16 WHERE IdHotel=6 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=4000.00, MaximoHuespedes=8, HabitacionesTotales=9 WHERE IdHotel=6 AND TipoHabitacion='Suite';
+
+-- Hotel 7
+UPDATE Habitacion SET Precio=1500.00, MaximoHuespedes=2, HabitacionesTotales=22 WHERE IdHotel=7 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2200.00, MaximoHuespedes=4, HabitacionesTotales=16 WHERE IdHotel=7 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3850.00, MaximoHuespedes=8, HabitacionesTotales=9 WHERE IdHotel=7 AND TipoHabitacion='Suite';
+
+-- Hotel 8
+UPDATE Habitacion SET Precio=2200.00, MaximoHuespedes=2, HabitacionesTotales=28 WHERE IdHotel=8 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=3200.00, MaximoHuespedes=4, HabitacionesTotales=20 WHERE IdHotel=8 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=5200.00, MaximoHuespedes=10, HabitacionesTotales=12 WHERE IdHotel=8 AND TipoHabitacion='Suite';
+
+-- Hotel 9
+UPDATE Habitacion SET Precio=2400.00, MaximoHuespedes=2, HabitacionesTotales=28 WHERE IdHotel=9 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=3400.00, MaximoHuespedes=4, HabitacionesTotales=20 WHERE IdHotel=9 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=5600.00, MaximoHuespedes=10, HabitacionesTotales=12 WHERE IdHotel=9 AND TipoHabitacion='Suite';
+
+-- Hotel 10
+UPDATE Habitacion SET Precio=2100.00, MaximoHuespedes=2, HabitacionesTotales=26 WHERE IdHotel=10 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=3100.00, MaximoHuespedes=4, HabitacionesTotales=18 WHERE IdHotel=10 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=5200.00, MaximoHuespedes=10, HabitacionesTotales=11 WHERE IdHotel=10 AND TipoHabitacion='Suite';
+
+-- Hotel 11
+UPDATE Habitacion SET Precio=1750.00, MaximoHuespedes=2, HabitacionesTotales=20 WHERE IdHotel=11 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2550.00, MaximoHuespedes=4, HabitacionesTotales=15 WHERE IdHotel=11 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=4200.00, MaximoHuespedes=8, HabitacionesTotales=8 WHERE IdHotel=11 AND TipoHabitacion='Suite';
+
+-- Hotel 12
+UPDATE Habitacion SET Precio=1650.00, MaximoHuespedes=2, HabitacionesTotales=20 WHERE IdHotel=12 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2400.00, MaximoHuespedes=4, HabitacionesTotales=15 WHERE IdHotel=12 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=4000.00, MaximoHuespedes=8, HabitacionesTotales=8 WHERE IdHotel=12 AND TipoHabitacion='Suite';
+
+-- Hotel 13
+UPDATE Habitacion SET Precio=1600.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=13 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2300.00, MaximoHuespedes=4, HabitacionesTotales=14 WHERE IdHotel=13 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3900.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=13 AND TipoHabitacion='Suite';
+
+-- Hotel 14
+UPDATE Habitacion SET Precio=1700.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=14 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2400.00, MaximoHuespedes=4, HabitacionesTotales=14 WHERE IdHotel=14 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=4100.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=14 AND TipoHabitacion='Suite';
+
+-- Hotel 15
+UPDATE Habitacion SET Precio=2000.00, MaximoHuespedes=2, HabitacionesTotales=24 WHERE IdHotel=15 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=3000.00, MaximoHuespedes=4, HabitacionesTotales=18 WHERE IdHotel=15 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=5200.00, MaximoHuespedes=10, HabitacionesTotales=11 WHERE IdHotel=15 AND TipoHabitacion='Suite';
+
+-- Hotel 16
+UPDATE Habitacion SET Precio=1200.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=16 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1750.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=16 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3000.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=16 AND TipoHabitacion='Suite';
+
+-- Hotel 17
+UPDATE Habitacion SET Precio=1150.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=17 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1700.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=17 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2900.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=17 AND TipoHabitacion='Suite';
+
+-- Hotel 18
+UPDATE Habitacion SET Precio=1050.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=18 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1650.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=18 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2800.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=18 AND TipoHabitacion='Suite';
+
+-- Hotel 19
+UPDATE Habitacion SET Precio=1000.00, MaximoHuespedes=2, HabitacionesTotales=14 WHERE IdHotel=19 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1550.00, MaximoHuespedes=4, HabitacionesTotales=10 WHERE IdHotel=19 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2700.00, MaximoHuespedes=8, HabitacionesTotales=5 WHERE IdHotel=19 AND TipoHabitacion='Suite';
+
+-- Hotel 20
+UPDATE Habitacion SET Precio=980.00, MaximoHuespedes=2, HabitacionesTotales=14 WHERE IdHotel=20 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1500.00, MaximoHuespedes=4, HabitacionesTotales=10 WHERE IdHotel=20 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2600.00, MaximoHuespedes=8, HabitacionesTotales=5 WHERE IdHotel=20 AND TipoHabitacion='Suite';
+
+-- Hotel 21
+UPDATE Habitacion SET Precio=1150.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=21 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1700.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=21 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3000.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=21 AND TipoHabitacion='Suite';
+
+-- Hotel 22
+UPDATE Habitacion SET Precio=1250.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=22 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1850.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=22 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3200.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=22 AND TipoHabitacion='Suite';
+
+-- Hotel 23
+UPDATE Habitacion SET Precio=1300.00, MaximoHuespedes=2, HabitacionesTotales=16 WHERE IdHotel=23 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1900.00, MaximoHuespedes=4, HabitacionesTotales=12 WHERE IdHotel=23 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3300.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=23 AND TipoHabitacion='Suite';
+
+-- Hotel 24
+UPDATE Habitacion SET Precio=1100.00, MaximoHuespedes=2, HabitacionesTotales=15 WHERE IdHotel=24 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1650.00, MaximoHuespedes=4, HabitacionesTotales=11 WHERE IdHotel=24 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2950.00, MaximoHuespedes=8, HabitacionesTotales=6 WHERE IdHotel=24 AND TipoHabitacion='Suite';
+
+-- Hotel 25
+UPDATE Habitacion SET Precio=1500.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=25 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2200.00, MaximoHuespedes=4, HabitacionesTotales=13 WHERE IdHotel=25 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3800.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=25 AND TipoHabitacion='Suite';
+
+-- Hotel 26
+UPDATE Habitacion SET Precio=1450.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=26 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=2150.00, MaximoHuespedes=4, HabitacionesTotales=13 WHERE IdHotel=26 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3700.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=26 AND TipoHabitacion='Suite';
+
+-- Hotel 27
+UPDATE Habitacion SET Precio=1000.00, MaximoHuespedes=2, HabitacionesTotales=14 WHERE IdHotel=27 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1550.00, MaximoHuespedes=4, HabitacionesTotales=10 WHERE IdHotel=27 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2800.00, MaximoHuespedes=8, HabitacionesTotales=5 WHERE IdHotel=27 AND TipoHabitacion='Suite';
+
+-- Hotel 28
+UPDATE Habitacion SET Precio=990.00, MaximoHuespedes=2, HabitacionesTotales=14 WHERE IdHotel=28 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1500.00, MaximoHuespedes=4, HabitacionesTotales=10 WHERE IdHotel=28 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=2700.00, MaximoHuespedes=8, HabitacionesTotales=5 WHERE IdHotel=28 AND TipoHabitacion='Suite';
+
+-- Hotel 29
+UPDATE Habitacion SET Precio=1300.00, MaximoHuespedes=2, HabitacionesTotales=18 WHERE IdHotel=29 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=1950.00, MaximoHuespedes=4, HabitacionesTotales=13 WHERE IdHotel=29 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=3400.00, MaximoHuespedes=8, HabitacionesTotales=7 WHERE IdHotel=29 AND TipoHabitacion='Suite';
+
+-- Hotel 30
+UPDATE Habitacion SET Precio=2100.00, MaximoHuespedes=2, HabitacionesTotales=26 WHERE IdHotel=30 AND TipoHabitacion='Sencilla';
+UPDATE Habitacion SET Precio=3100.00, MaximoHuespedes=4, HabitacionesTotales=18 WHERE IdHotel=30 AND TipoHabitacion='Doble';
+UPDATE Habitacion SET Precio=5200.00, MaximoHuespedes=10, HabitacionesTotales=11 WHERE IdHotel=30 AND TipoHabitacion='Suite';
+
+
+ALTER TABLE Usuario
+  ADD COLUMN Password VARCHAR(255) NOT NULL AFTER Correo;
+
+
+ALTER TABLE Reservacion
+ADD COLUMN IdHabitacion INT NOT NULL;
+
+ALTER TABLE Reservacion
+ADD CONSTRAINT fk_res_hab
+FOREIGN KEY (IdHabitacion) REFERENCES Habitacion(IdHabitacion)
+ON UPDATE CASCADE
+ON DELETE RESTRICT;
+
+ALTER TABLE Usuario
+  ADD COLUMN two_factor_secret TEXT NULL,
+  ADD COLUMN two_factor_recovery_codes TEXT NULL,
+  ADD COLUMN two_factor_confirmed_at DATETIME NULL;
