@@ -326,3 +326,15 @@ ADD CONSTRAINT fk_res_hab
 FOREIGN KEY (IdHabitacion) REFERENCES Habitacion(IdHabitacion)
 ON UPDATE CASCADE
 ON DELETE RESTRICT;
+
+
+-------------------------------------------------------------------------------------
+
+Modificacion de la tabla Usuarios para el 2FA:
+
+ALTER TABLE Usuario
+  ADD COLUMN two_factor_secret TEXT NULL,
+  ADD COLUMN two_factor_recovery_codes TEXT NULL,
+  ADD COLUMN two_factor_confirmed_at DATETIME NULL;
+
+--------------------------------------------------------------------------------
