@@ -201,3 +201,58 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 });
+
+/* =========
+   REGISTRO (sin auto-login)
+   ========= */
+document.addEventListener("DOMContentLoaded", () => {
+  const registerForm = document.getElementById("registerForm");
+  if (!registerForm) return;
+
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombre")?.value?.trim() ?? "";
+    const correo = document.getElementById("correo")?.value?.trim() ?? "";
+    const password = document.getElementById("password")?.value ?? "";
+    const password2 = document.getElementById("password2")?.value ?? "";
+
+    if (!nombre || !correo || !password || !password2) {
+      alert("Completa todos los campos.");
+      return;
+    }
+
+    if (password !== password2) {
+      alert("Las contraseñas no coinciden");
+      return;
+    }
+
+    try {
+      await apiPost("usuarios", {
+        Nombre: nombre,
+        Correo: correo,
+        Password: password,
+        // por si tu backend valida confirmación estilo Laravel
+        Password_confirmation: password2,
+      });
+
+      alert("Registro realizado correctamente. Ahora inicia sesión.");
+      registerForm.reset();
+    } catch (err) {
+      const body = err?.body;
+
+      if (body?.errors?.Password) {
+        alert("La contraseña debe tener al menos 8 caracteres.");
+        return;
+      }
+      if (body?.errors?.Correo) {
+        alert("El correo ya está registrado.");
+        return;
+      }
+
+      alert(err?.message || body?.message || "Error al registrarse. Verifica tus datos.");
+    }
+  });
+});
+
+
