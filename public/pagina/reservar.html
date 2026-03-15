@@ -48,9 +48,7 @@
 <script src="auth.js"></script>
 
 <script>
-function getQueryParam(name) {
-  return new URLSearchParams(location.search).get(name);
-}
+
 
 function daysBetween(start, end) {
   const ms = new Date(end) - new Date(start);
@@ -60,8 +58,11 @@ function daysBetween(start, end) {
 document.addEventListener("DOMContentLoaded", async () => {
   renderMenu();
 
-  const habitacionId = getQueryParam("habitacionId");
-  const hotelId = getQueryParam("hotelId");
+  //Encriptado de el ID de habitacion y hotel
+  const q = new URLSearchParams(location.search).get("q");
+  const urlData = decryptUrlData(q) || {};
+  const habitacionId = urlData.habitacionId ? String(urlData.habitacionId) : null;
+  const hotelId = urlData.hotelId ? String(urlData.hotelId) : null;
 
   const titulo = document.getElementById("titulo");
   const disp = document.getElementById("disponibles");

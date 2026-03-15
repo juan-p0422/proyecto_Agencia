@@ -27,7 +27,10 @@
         document.addEventListener("DOMContentLoaded", async () => {
             renderMenu();
 
-            const hotelId = new URLSearchParams(location.search).get("hotelId");
+            //Encriptacion del ID del hotel
+            const q = new URLSearchParams(location.search).get("q");
+            const urlData = decryptUrlData(q) || {};
+            const hotelId = urlData.hotelId;
             const container = document.getElementById("habitacionesContainer");
 
             if (!hotelId) {
@@ -54,7 +57,7 @@
                     else if (disp >= 1) color = "red";
 
                     const boton = disp > 0
-                        ? `<a class="btn" href="reservar.html?hotelId=${hotelId}&habitacionId=${h.IdHabitacion}">Reservar</a>`
+                        ? `<a class="btn" href="reservar.html?q=${encryptUrlData({ hotelId: hotelId, habitacionId: h.IdHabitacion })}">Reservar</a>`
                         : `<button class="btn-disabled" disabled>No disponible</button>`;
 
                     return `

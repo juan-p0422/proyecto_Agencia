@@ -330,3 +330,21 @@ ALTER TABLE Usuario
   ADD COLUMN two_factor_secret TEXT NULL,
   ADD COLUMN two_factor_recovery_codes TEXT NULL,
   ADD COLUMN two_factor_confirmed_at DATETIME NULL;
+
+
+INSERT INTO Transporte (TipoTransporte, PrecioPorPersona, NombreEmpresa) VALUES
+-- Autobús
+('Autobus', 350.00, 'Primera Plus'),
+('Autobus', 450.00, 'ETN'),
+('Autobus', 550.00, 'Vallarta Plus'),
+('Autobus', 650.00, 'Omnibus de México'),
+('Autobus', 750.00, 'TAP'),
+('Autobus', 850.00, 'Primera Plus'),
+('Autobus', 950.00, 'ETN'),
+-- Avión
+('Avion', 1200.00, 'Volaris'),
+('Avion', 1600.00, 'Viva Aerobus'),
+('Avion', 2000.00, 'Aeroméxico'),
+('Avion', 2400.00, 'Volaris'),
+('Avion', 2800.00, 'Aeroméxico'),
+('Avion', 3200.00, 'Viva Aerobus');

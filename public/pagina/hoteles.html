@@ -30,7 +30,7 @@
           <div class="card">
             <h4>${h.NombreHotel}</h4>
             <p>${h.Ubicacion}</p>
-            <a class="btn" href="habitaciones.html?hotelId=${h.IdHotel}">Ver habitaciones</a>
+            <a class="btn" href="habitaciones.html?q=${encryptUrlData({ hotelId: h.IdHotel })}">Ver habitaciones</a>
           </div>
         `).join("");
       } catch (e) {

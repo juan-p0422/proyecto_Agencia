@@ -1,5 +1,6 @@
 // api.js
 window.API_URL = window.API_URL || "http://127.0.0.1:8000/api/";
+//window.API_URL = window.API_URL || "http://192.168.1.10:8000/api/";
 
 /* =========
    Auth / sesión
@@ -148,6 +149,45 @@ async function detachUsuarioFromReservacion(idReservacion, idUsuario) {
   return apiPost(`reservaciones/${idReservacion}/usuarios/detach`, { IdUsuario: idUsuario });
 }
 
+
+/* =========
+   Encriptación de URL (Base64 + XOR)
+   ========= */
+const SECRET_KEY = "proyectoAgenciaJEJRJO"; 
+
+function encryptUrlData(obj) {
+  const text = JSON.stringify(obj);
+  let result = "";
+  for (let i = 0; i < text.length; i++) {
+    // Operación XOR para ofuscar el texto
+    result += String.fromCharCode(text.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+  }
+  // Convertir a Base64 y reemplazar caracteres conflictivos en URLs (+, /, =)
+  return btoa(result).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decryptUrlData(encodedText) {
+  if (!encodedText) return null;
+  try {
+    // Revertir el formato URL-safe a Base64 normal
+    let text = encodedText.replace(/-/g, '+').replace(/_/g, '/');
+    while (text.length % 4) text += '=';
+    let decoded = atob(text);
+    
+    let result = "";
+    for (let i = 0; i < decoded.length; i++) {
+      result += String.fromCharCode(decoded.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+    }
+    return JSON.parse(result); // devuelve el original
+  } catch (e) {
+    console.warn("URL manipulada o inválida");
+    return null; 
+  }
+}
+
+
+
+
 /* =========
    Exports globales
    ========= */
@@ -171,3 +211,7 @@ window.detachUsuarioFromReservacion = detachUsuarioFromReservacion;
 window.getCurrentUser = getCurrentUser;
 window.renderMenu = renderMenu;
 window.logout = logout;
+
+
+window.encryptUrlData = encryptUrlData;
+window.decryptUrlData = decryptUrlData;
