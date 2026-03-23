@@ -82,7 +82,8 @@ class TwoFactorController extends Controller
 
         Cache::forget("2fa_pending:{$data['pending_token']}");
 
-        $token = $user->createToken('api')->plainTextToken;
+        // 🔹 MAGIA JWT: Generamos el token
+        $token = auth('api')->login($user);
 
         return response()->json([
             'token' => $token,
@@ -90,7 +91,7 @@ class TwoFactorController extends Controller
         ]);
     }
 
-    // ========== (Protegidos: auth:sanctum) ==========
+    // ========== (Protegidos: auth:api) ==========
     public function setup(Request $request)
     {
         $user = $request->user();
@@ -212,8 +213,8 @@ class TwoFactorController extends Controller
 
         Cache::forget("2fa_enroll:{$data['enroll_token']}");
 
-        // Ya queda logueado (token final)
-        $token = $user->createToken('api')->plainTextToken;
+        // 🔹 MAGIA JWT: Generamos el token
+        $token = auth('api')->login($user);
 
         return response()->json([
             'message' => '2FA activado',

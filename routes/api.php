@@ -34,10 +34,10 @@ Route::apiResource('descuentos', DescuentoController::class)->only(['index', 'sh
 
 
 /* ==========================================
-   RUTAS PROTEGIDAS (Requieren Token Sanctum)
+   RUTAS PROTEGIDAS (Requieren Token JWT)
    ========================================== */
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () { // Cambiado a auth:api
     
     // Gestión de Usuarios y Reservaciones completas
     Route::apiResource('usuarios', UsuarioController::class);
@@ -60,4 +60,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('2fa/confirm', [TwoFactorController::class, 'confirm']);
     Route::post('2fa/disable', [TwoFactorController::class, 'disable']);
 });
-

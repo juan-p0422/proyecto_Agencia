@@ -94,7 +94,7 @@ class UsuarioController extends Controller
             return response()->json(['mensaje' => 'Credenciales inválidas'], 401);
         }
 
-        // ✅ Corregido: tus columnas reales están en snake_case
+        // Corregido: tus columnas reales están en snake_case
         $twoFactorEnabled =
             !empty($usuario->two_factor_secret)
             && !empty($usuario->two_factor_confirmed_at);
@@ -109,7 +109,8 @@ class UsuarioController extends Controller
             ]);
         }
 
-        $token = $usuario->createToken('api')->plainTextToken;
+        // 🔹 MAGIA JWT: Generamos el token
+        $token = auth('api')->login($usuario);
 
         return response()->json([
             'token' => $token,

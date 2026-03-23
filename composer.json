@@ -11,7 +11,8 @@
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
-        "pragmarx/google2fa-laravel": "^2.3"
+        "pragmarx/google2fa-laravel": "^2.3",
+        "tymon/jwt-auth": "^2.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -90,7 +91,9 @@
             "ignore": [
                 "PKSA-23 gr-8qht-p93v",
                 "PKSA-365x-2zjk-pt47",
-                "PKSA-454z-t146-6123"
+                "PKSA-454z-t146-6123",
+                "PKSA-21fb-n1x5-5nf7",
+                "PKSA-2cx9-ynrq-qdk3"
             ]
         }
     },

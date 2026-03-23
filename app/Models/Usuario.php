@@ -3,17 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\HasApiTokens;
+use Tymon\JWTAuth\Contracts\JWTSubject; // 1. Importamos la interfaz de JWT
 
-class Usuario extends Authenticatable
+// 2. Le decimos a la clase que implemente JWTSubject
+class Usuario extends Authenticatable implements JWTSubject 
 {
-    use HasApiTokens, Notifiable;
-
-    protected $table = 'Usuario';
+    // Asegúrate de que el nombre de tu tabla sea el correcto
+    protected $table = 'Usuario'; 
     protected $primaryKey = 'IdUsuario';
-    public $timestamps = false;
+    public $timestamps = false; // Cambia a true si usas created_at y updated_at
 
     protected $fillable = [
         'Nombre',
@@ -21,47 +19,37 @@ class Usuario extends Authenticatable
         'Password',
         'two_factor_secret',
         'two_factor_recovery_codes',
-        'two_factor_confirmed_at',
+        'two_factor_confirmed_at'
     ];
 
+    // Ocultamos datos sensibles cuando el usuario se devuelve en JSON
     protected $hidden = [
         'Password',
         'two_factor_secret',
-        'two_factor_recovery_codes',
+        'two_factor_recovery_codes'
     ];
 
-    public function reservaciones()
+    /* ==========================================================
+       🔹 MÉTODOS OBLIGATORIOS PARA QUE JWT FUNCIONE 🔹
+       ========================================================== */
+
+    /**
+     * Obtiene el identificador que se guardará en el Token (tu IdUsuario).
+     */
+    public function getJWTIdentifier()
     {
-        return $this->belongsToMany(
-            Reservacion::class,
-            'Usuario_Reservacion',
-            'IdUsuario',
-            'IdReservacion'
-        );
+        return $this->getKey();
     }
 
     /**
-     * Hashea automáticamente la contraseña si no viene ya hasheada.
+     * Permite agregar datos extra (claims) dentro del Token.
+     * Si no necesitas datos extra, simplemente retornamos un array vacío.
      */
-    public function setPasswordAttribute($value)
+    public function getJWTCustomClaims()
     {
-        if (!$value) {
-            $this->attributes['Password'] = $value;
-            return;
-        }
-
-        $isBcrypt = is_string($value) && preg_match('/^\$2[ayb]\$.{56}$/', $value);
-
-        $this->attributes['Password'] = $isBcrypt ? $value : Hash::make($value);
-    }
-
-    public function getAuthPassword()
-    {
-        return $this->Password;
-    }
-
-    public function getEmailForPasswordReset()
-    {
-        return $this->Correo;
+        return [
+            'correo' => $this->Correo,
+            'nombre' => $this->Nombre
+        ];
     }
 }
