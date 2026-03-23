@@ -28,8 +28,8 @@
         const hoteles = await fetchHoteles();
         cont.innerHTML = hoteles.map(h => `
           <div class="card">
-            <h4>${h.NombreHotel}</h4>
-            <p>${h.Ubicacion}</p>
+            <h4>${window.escapeHTML(h.NombreHotel)}</h4>
+            <p>${window.escapeHTML(h.Ubicacion)}</p>
             <a class="btn" href="habitaciones.html?q=${encryptUrlData({ hotelId: h.IdHotel })}">Ver habitaciones</a>
           </div>
         `).join("");

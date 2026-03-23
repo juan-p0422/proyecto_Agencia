@@ -1,4 +1,3 @@
-// auth.js (login + 2FA, usa qrcode.js davidshimjs)
 
 function showMsg(t) {
   const el = document.getElementById("msg");
@@ -30,7 +29,7 @@ function finishSession(resp) {
 }
 
 /* =========
-   QR (qrcode.js de davidshimjs)
+   QR (qrcode.js)
    ========= */
 async function drawQR(otpauthUrl) {
   const qrBox = document.getElementById("qrBox");
@@ -254,5 +253,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-
-

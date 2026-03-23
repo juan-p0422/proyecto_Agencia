@@ -48,8 +48,6 @@
 <script src="auth.js"></script>
 
 <script>
-
-
 function daysBetween(start, end) {
   const ms = new Date(end) - new Date(start);
   return Math.max(Math.ceil(ms / 86400000), 1);
@@ -87,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    titulo.textContent = `${habit.TipoHabitacion} — $${habit.Precio}/noche`;
+    titulo.textContent = `${window.escapeHTML(habit.TipoHabitacion)} — $${habit.Precio}/noche`;
     disp.textContent = `Disponibles: ${habit.HabitacionesTotales}`;
 
     if (habit.HabitacionesTotales === 0) {
@@ -99,7 +97,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const transportes = await fetchTransportes();
     transporteSelect.innerHTML = transportes.map(t => `
       <option value="${t.IdTransporte}" data-price="${t.PrecioPorPersona}">
-        ${t.TipoTransporte} (${t.NombreEmpresa}) - $${t.PrecioPorPersona}
+        ${window.escapeHTML(t.TipoTransporte)} (${window.escapeHTML(t.NombreEmpresa)}) - $${t.PrecioPorPersona}
       </option>
     `).join("");
 
@@ -114,7 +112,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const ff = fechaFin.value;
       let nh = Number(numHabitaciones.value);
       let nhues = Number(numHuespedes.value);
-      const transpPrice = Number(transporteSelect.selectedOptions[0].dataset.price);
+      
+      const opcionSeleccionada = transporteSelect.selectedOptions[0];
+      const transpPrice = opcionSeleccionada ? Number(opcionSeleccionada.dataset.price) : 0;
 
       if (!fi || !ff) return;
 
@@ -180,33 +180,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         IdHabitacion: Number(habitacionId),
         Estatus: "Activa"
       };
+        //Usamos apipost debido a las limitaciones impuestas en la ruta
+      try {
+        const data = await apiPost("reservaciones", body);
 
-      const res = await fetch(`${API_URL}reservaciones`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
+        msg.textContent = "Reservación creada exitosamente. Asociando usuario...";
 
-      const data = await res.json();
+        await attachUsuarioToReservacion(data.IdReservacion, usuario.IdUsuario);
 
-      if (res.status === 409) {
-        msg.textContent = "No hay suficientes habitaciones disponibles.";
-        return;
+        setTimeout(() => {
+          location.href = "perfil.html";
+        }, 1200);
+
+      } catch (err) {
+        if (err.status === 409) {
+          msg.textContent = "No hay suficientes habitaciones disponibles.";
+        } else {
+          msg.textContent = "Error al crear reservación: " + (err.message || "Revisa tus datos.");
+          console.error(err);
+        }
       }
-
-      if (!res.ok) {
-        msg.textContent = "Error al crear reservación.";
-        console.error(data);
-        return;
-      }
-
-      msg.textContent = "Reservación creada exitosamente. Asociando usuario...";
-
-      await attachUsuarioToReservacion(data.IdReservacion, usuario.IdUsuario);
-
-      setTimeout(() => {
-        location.href = "perfil.html";
-      }, 1200);
 
     });
 

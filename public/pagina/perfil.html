@@ -27,25 +27,21 @@
     <script>
         // Llama al backend para obtener TODAS las reservaciones
         async function fetchReservaciones() {
-            const res = await fetch(`${API_URL}reservaciones`);
-            return await res.json();
+            return await apiGet("reservaciones");
         }
 
         // Cancelar una reservación
         async function cancelarReserva(id) {
             if (!confirm("¿Seguro que deseas cancelar esta reservación?")) return;
 
-            const res = await fetch(`${API_URL}reservaciones/${id}/cancelar`, {
-                method: "PATCH"
-            });
-
-            if (!res.ok) {
-                alert("No se pudo cancelar la reservación");
-                return;
+            try {
+                await apiRequest(`reservaciones/${id}/cancelar`, { method: "PATCH" });
+                alert("Reservación cancelada exitosamente.");
+                location.reload(); // refrescar lista
+            } catch (err) {
+                alert("No se pudo cancelar la reservación: " + (err.message || "Error desconocido"));
+                console.error(err);
             }
-
-            alert("Reservación cancelada");
-            location.reload(); // refrescar lista
         }
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -88,13 +84,13 @@
 
                     return `
         <div class="reserva-card">
-          <h3>Hotel ${hotel.NombreHotel ?? ""}</h3>
-          <p><strong>Habitación:</strong> ${habitacion.TipoHabitacion ?? "N/A"}</p>
+          <h3>Hotel ${window.escapeHTML(hotel.NombreHotel ?? "")}</h3>
+          <p><strong>Habitación:</strong> ${window.escapeHTML(habitacion.TipoHabitacion ?? "N/A")}</p>
           <p><strong>Fechas:</strong> ${fechaInicio} → ${fechaFin}</p>
           <p><strong>No. Habitaciones:</strong> ${r.NumHabitaciones}</p>
           <p><strong>Precio Total:</strong> $${r.PrecioTotal}</p>
-          <p><strong>Estatus:</strong> ${r.Estatus}</p>
-          <p><strong>Transporte:</strong> ${transporte.TipoTransporte ?? "N/A"}</p>
+          <p><strong>Estatus:</strong> ${window.escapeHTML(r.Estatus)}</p>
+          <p><strong>Transporte:</strong> ${window.escapeHTML(transporte.TipoTransporte ?? "N/A")}</p>
           ${botonCancelar}
         </div>
       `;

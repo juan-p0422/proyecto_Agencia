@@ -1,6 +1,18 @@
-// api.js
 window.API_URL = window.API_URL || "http://127.0.0.1:8000/api/";
 //window.API_URL = window.API_URL || "http://192.168.1.10:8000/api/";
+
+/* =========
+   Prevencion XSS
+   ========= */
+window.escapeHTML = function(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
 
 /* =========
    Auth / sesión
@@ -38,7 +50,7 @@ function renderMenu() {
 
   if (user) {
     menu.innerHTML = `
-      <span>Hola, ${user.Nombre ?? "Usuario"}</span>
+      <span>Hola, ${window.escapeHTML(user.Nombre ?? "Usuario")}</span>
       <a href="perfil.html">Mi perfil</a>
       <a href="#" id="logoutLink">Cerrar sesión</a>
     `;
@@ -126,7 +138,7 @@ async function apiPut(endpoint, data) { return apiRequest(endpoint, { method: "P
 async function apiDelete(endpoint) { return apiRequest(endpoint, { method: "DELETE" }); }
 
 /* =========
-   Helpers para recursos (compatibles con tu index “original”)
+   Helpers para recursos 
    ========= */
 async function fetchHoteles() { return apiGet("hoteles"); }
 async function fetchHabitaciones() { return apiGet("habitaciones"); }
@@ -185,9 +197,6 @@ function decryptUrlData(encodedText) {
   }
 }
 
-
-
-
 /* =========
    Exports globales
    ========= */
@@ -211,7 +220,6 @@ window.detachUsuarioFromReservacion = detachUsuarioFromReservacion;
 window.getCurrentUser = getCurrentUser;
 window.renderMenu = renderMenu;
 window.logout = logout;
-
 
 window.encryptUrlData = encryptUrlData;
 window.decryptUrlData = decryptUrlData;

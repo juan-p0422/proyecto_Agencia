@@ -62,7 +62,7 @@
 
                     return `
         <div class="card">
-          <h3>${h.TipoHabitacion}</h3>
+          <h3>${window.escapeHTML(h.TipoHabitacion)}</h3>
           <p><strong>Precio:</strong> $${h.Precio} / noche</p>
           <p><strong>Máximo:</strong> ${h.MaximoHuespedes} huéspedes por habitación</p>
 

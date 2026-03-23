@@ -11,6 +11,8 @@ class ReservacionController extends Controller
 {
     public function index()
     {
+        
+        // Lo dejamos como lo tenías, asumiendo que el frontend filtra o es para un admin:
         return response()->json(
             Reservacion::with(['hotel', 'transporte', 'usuarios', 'habitacion'])->get()
         );
@@ -19,8 +21,14 @@ class ReservacionController extends Controller
     public function show($id)
     {
         $r = Reservacion::with(['hotel', 'transporte', 'usuarios', 'habitacion'])->find($id);
-        if (!$r)
-            return response()->json(['mensaje' => 'No encontrado'], 404);
+        if (!$r) return response()->json(['mensaje' => 'No encontrado'], 404);
+
+        // PROTECCIÓN: Solo el dueño (o un admin) puede verla
+        $usuarioActual = auth()->user();
+        if (!$r->usuarios->contains('IdUsuario', $usuarioActual->IdUsuario)) {
+            return response()->json(['mensaje' => 'Acceso denegado. No es tu reservación.'], 403);
+        }
+
         return response()->json($r);
     }
 
@@ -67,8 +75,13 @@ class ReservacionController extends Controller
     public function update(Request $request, $id)
     {
         $r = Reservacion::find($id);
-        if (!$r)
-            return response()->json(['mensaje' => 'No encontrado'], 404);
+        if (!$r) return response()->json(['mensaje' => 'No encontrado'], 404);
+
+        // PROTECCIÓN: Solo el dueño puede modificarla
+        $usuarioActual = auth()->user();
+        if (!$r->usuarios->contains('IdUsuario', $usuarioActual->IdUsuario)) {
+            return response()->json(['mensaje' => 'Acceso denegado. No puedes modificar esta reservación.'], 403);
+        }
 
         $data = $request->validate([
             'FechaInicio' => ['sometimes', 'required', 'date'],
@@ -95,8 +108,13 @@ class ReservacionController extends Controller
     public function destroy($id)
     {
         $r = Reservacion::find($id);
-        if (!$r)
-            return response()->json(['mensaje' => 'No encontrado'], 404);
+        if (!$r) return response()->json(['mensaje' => 'No encontrado'], 404);
+
+        // 🔒 PROTECCIÓN: Solo el dueño puede eliminarla
+        $usuarioActual = auth()->user();
+        if (!$r->usuarios->contains('IdUsuario', $usuarioActual->IdUsuario)) {
+            return response()->json(['mensaje' => 'Acceso denegado. No puedes eliminar esta reservación.'], 403);
+        }
 
         $r->delete();
         return response()->json(['mensaje' => 'Eliminado']);
@@ -104,10 +122,17 @@ class ReservacionController extends Controller
 
     public function cancelar($id)
     {
-        $r = Reservacion::find($id);
+        // Cargamos la reservación junto con sus usuarios para poder verificar
+        $r = Reservacion::with('usuarios')->find($id);
 
         if (!$r) {
             return response()->json(['mensaje' => 'No encontrado'], 404);
+        }
+
+        // PROTECCIÓN IDOR: Verificamos que el usuario logueado sea dueño de la reserva
+        $usuarioActual = auth()->user();
+        if (!$r->usuarios->contains('IdUsuario', $usuarioActual->IdUsuario)) {
+            return response()->json(['mensaje' => 'Acceso denegado. Esta reservación no te pertenece.'], 403);
         }
 
         if ($r->Estatus === 'Cancelada') {
@@ -115,8 +140,10 @@ class ReservacionController extends Controller
         }
 
         $habitacion = Habitacion::find($r->IdHabitacion);
-        $habitacion->HabitacionesTotales += $r->NumHabitaciones;
-        $habitacion->save();
+        if ($habitacion) {
+            $habitacion->HabitacionesTotales += $r->NumHabitaciones;
+            $habitacion->save();
+        }
 
         $r->Estatus = 'Cancelada';
         $r->save();
