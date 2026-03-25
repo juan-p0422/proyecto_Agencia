@@ -35,11 +35,11 @@ class UsuarioController extends Controller
             'Password' => ['required', 'string', 'min:8'],
         ]);
 
-        // ✅ NO hashear aquí. El modelo (mutator) lo hace una sola vez.
+        // 🟢 SOLUCIÓN: Encriptamos la contraseña aquí mismo usando Hash::make()
         $usuario = (new UsuarioBuilder())
             ->setNombre($data['Nombre'])
             ->setCorreo($data['Correo'])
-            ->setPassword($data['Password']) // texto plano
+            ->setPassword(Hash::make($data['Password'])) 
             ->build();
 
         return response()->json($usuario->makeHidden(['Password']), 201);
@@ -64,7 +64,11 @@ class UsuarioController extends Controller
             'Password' => ['sometimes', 'required', 'string', 'min:8'],
         ]);
 
-        // ✅ NO hashear aquí tampoco. El mutator del modelo lo hará.
+        // El usuario envió una nueva contraseña para actualizar, la encriptamos
+        if (isset($data['Password'])) {
+            $data['Password'] = Hash::make($data['Password']);
+        }
+
         $usuario->update($data);
 
         return response()->json($usuario->fresh()->makeHidden(['Password']));
@@ -90,11 +94,11 @@ class UsuarioController extends Controller
 
         $usuario = Usuario::where('Correo', $data['Correo'])->first();
 
+        // Hash::check compara el texto plano del login con el Hash de la BD
         if (!$usuario || !Hash::check($data['Password'], $usuario->Password)) {
             return response()->json(['mensaje' => 'Credenciales inválidas'], 401);
         }
 
-        // Corregido: tus columnas reales están en snake_case
         $twoFactorEnabled =
             !empty($usuario->two_factor_secret)
             && !empty($usuario->two_factor_confirmed_at);
@@ -109,7 +113,7 @@ class UsuarioController extends Controller
             ]);
         }
 
-        // 🔹 MAGIA JWT: Generamos el token
+        // Generamos el token JWT
         $token = auth('api')->login($usuario);
 
         return response()->json([
