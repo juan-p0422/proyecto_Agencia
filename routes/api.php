@@ -16,8 +16,10 @@ use App\Http\Controllers\{
    RUTAS PÚBLICAS (No requieren Token)
    ========================================== */
 
-// Autenticación y Registro
+// Autenticación y Registro en publico para la api usuarios
 Route::post('register', [TwoFactorController::class, 'register']);
+// Dejamos solo el POST en publico para nuevos registros
+Route::post('usuarios', [UsuarioController::class, 'store']); 
 // Solo permite 5 intentos por minuto para el login y 2FA
 Route::post('login', [TwoFactorController::class, 'login'])->middleware('throttle:5,1');
 Route::post('login/2fa', [TwoFactorController::class, 'login2fa'])->middleware('throttle:5,1');
@@ -40,8 +42,9 @@ Route::apiResource('descuentos', DescuentoController::class)->only(['index', 'sh
 Route::middleware('auth:api')->group(function () { // Cambiado a auth:api
     
     // Gestión de Usuarios y Reservaciones completas
-    Route::apiResource('usuarios', UsuarioController::class);
     Route::apiResource('reservaciones', ReservacionController::class);
+    // Protegemos el resto de acciones de usuarios (ver todos, editar, eliminar)
+    Route::apiResource('usuarios', UsuarioController::class)->except(['store']);
 
     // Rutas pivote de reservaciones
     Route::get('reservaciones/{id}/usuarios', [UsuarioReservacionController::class, 'indexByReservacion']);
