@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Usuario;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -12,13 +11,14 @@ use App\Services\Builders\UsuarioBuilder;
 
 class UsuarioController extends Controller
 {
-    public function index()
-    {
-        return response()->json(Usuario::query()->get()->makeHidden(['Password']));
-    }
-
     public function show($id)
     {
+        $usuarioActual = auth('api')->user();
+
+        if ($usuarioActual->IdUsuario != $id) {
+            return response()->json(['mensaje' => 'Acceso denegado. Solo puedes ver tu propio perfil.'], 403);
+        }
+
         $usuario = Usuario::find($id);
         if (!$usuario) {
             return response()->json(['mensaje' => 'No encontrado'], 404);
@@ -35,7 +35,6 @@ class UsuarioController extends Controller
             'Password' => ['required', 'string', 'min:8'],
         ]);
 
-        // 🟢 SOLUCIÓN: Encriptamos la contraseña aquí mismo usando Hash::make()
         $usuario = (new UsuarioBuilder())
             ->setNombre($data['Nombre'])
             ->setCorreo($data['Correo'])
@@ -43,46 +42,6 @@ class UsuarioController extends Controller
             ->build();
 
         return response()->json($usuario->makeHidden(['Password']), 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $usuario = Usuario::find($id);
-        if (!$usuario) {
-            return response()->json(['mensaje' => 'No encontrado'], 404);
-        }
-
-        $data = $request->validate([
-            'Nombre' => ['sometimes', 'required', 'string', 'max:100'],
-            'Correo' => [
-                'sometimes',
-                'required',
-                'email',
-                'max:150',
-                Rule::unique('Usuario', 'Correo')->ignore($usuario->IdUsuario, 'IdUsuario'),
-            ],
-            'Password' => ['sometimes', 'required', 'string', 'min:8'],
-        ]);
-
-        // El usuario envió una nueva contraseña para actualizar, la encriptamos
-        if (isset($data['Password'])) {
-            $data['Password'] = Hash::make($data['Password']);
-        }
-
-        $usuario->update($data);
-
-        return response()->json($usuario->fresh()->makeHidden(['Password']));
-    }
-
-    public function destroy($id)
-    {
-        $usuario = Usuario::find($id);
-        if (!$usuario) {
-            return response()->json(['mensaje' => 'No encontrado'], 404);
-        }
-
-        $usuario->delete();
-        return response()->json(['mensaje' => 'Eliminado']);
     }
 
     public function login(Request $request)
@@ -94,7 +53,6 @@ class UsuarioController extends Controller
 
         $usuario = Usuario::where('Correo', $data['Correo'])->first();
 
-        // Hash::check compara el texto plano del login con el Hash de la BD
         if (!$usuario || !Hash::check($data['Password'], $usuario->Password)) {
             return response()->json(['mensaje' => 'Credenciales inválidas'], 401);
         }
@@ -113,7 +71,6 @@ class UsuarioController extends Controller
             ]);
         }
 
-        // Generamos el token JWT
         $token = auth('api')->login($usuario);
 
         return response()->json([
