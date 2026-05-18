@@ -23,6 +23,9 @@ function finishSession(resp) {
   // Esperamos token+usuario (tu backend ya te deja entrar)
   if (resp?.token) localStorage.setItem("token", resp.token);
   if (resp?.usuario) localStorage.setItem("usuario", JSON.stringify(resp.usuario));
+  if (resp?.token && typeof window.startSessionTimer === "function") {
+    window.startSessionTimer(resp.token);
+  }
 
   reset2faStorage();
   location.href = "index.html";

@@ -67,3 +67,19 @@ confirmForm.addEventListener("submit", async (e) => {
     msg.textContent = e?.message || "Código inválido o enrolamiento expirado.";
   }
 });
+/* =========
+   Arranque Global de Seguridad
+   ========= */
+document.addEventListener("DOMContentLoaded", () => {
+  if (getToken()) {
+    // si no tiene la fecha de expiración guardada, la calculamos
+    if (!localStorage.getItem("session_expires_at")) {
+      startSessionTimer(getToken());
+    }
+    //revisamos si ya expiró
+    checkSessionInBackground();
+    
+    // bucle para que revise cada 5 segundos
+    initBackgroundSessionCheck();
+  }
+});

@@ -94,11 +94,47 @@ function formatSessionTime(ms) {
     .join(":");
 }
 
+function getSessionExpiration() {
+  const raw = Number(localStorage.getItem("session_expires_at"));
+  if (Number.isFinite(raw) && raw > 0) return raw;
+
+  if (getToken()) {
+    startSessionTimer();
+    const expiresAt = Number(localStorage.getItem("session_expires_at"));
+    return Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : null;
+  }
+
+  return null;
+}
+
+function isSessionExpired() {
+  const expiresAt = getSessionExpiration();
+  return expiresAt ? Date.now() >= expiresAt : false;
+}
+
+function checkSessionInBackground() {
+  if (getToken() && isSessionExpired()) {
+    logout();
+    return true;
+  }
+
+  return false;
+}
+
+function initBackgroundSessionCheck() {
+  checkSessionInBackground();
+  if (window.sessionCheckInterval) clearInterval(window.sessionCheckInterval);
+  window.sessionCheckInterval = setInterval(checkSessionInBackground, 5000);
+}
+
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
   localStorage.removeItem("pending_2fa");
   localStorage.removeItem("enroll_2fa");
+  localStorage.removeItem("session_start");
+  localStorage.removeItem("session_expires_at");
+  if (window.sessionCheckInterval) clearInterval(window.sessionCheckInterval);
   location.href = "index.html";
 }
 
@@ -109,6 +145,7 @@ function renderMenu() {
   const user = getCurrentUser();
 
   if (user) {
+    initBackgroundSessionCheck();
     menu.innerHTML = `
       <span>Hola, ${window.escapeHTML(user.Nombre ?? "Usuario")}</span>
       <a href="perfil.html">Mi perfil</a>
@@ -161,6 +198,8 @@ function buildError(res, body, endpoint) {
 }
 
 async function apiRequest(endpoint, { method = "GET", body = null, headers = {} } = {}) {
+  checkSessionInBackground();
+
   const url = window.API_URL + endpoint;
 
   const finalHeaders = {
@@ -187,6 +226,11 @@ async function apiRequest(endpoint, { method = "GET", body = null, headers = {} 
 
   const res = await fetch(url, fetchOptions);
   const parsed = await parseBody(res);
+
+  if (res.status === 401 && getToken()) {
+    logout();
+    return null;
+  }
 
   if (!res.ok) throw buildError(res, parsed, `${method} ${endpoint}`);
   return parsed;
@@ -280,6 +324,15 @@ window.detachUsuarioFromReservacion = detachUsuarioFromReservacion;
 window.getCurrentUser = getCurrentUser;
 window.renderMenu = renderMenu;
 window.logout = logout;
+window.startSessionTimer = startSessionTimer;
+window.getSessionElapsed = getSessionElapsed;
+window.formatSessionTime = formatSessionTime;
+window.checkSessionInBackground = checkSessionInBackground;
+window.initBackgroundSessionCheck = initBackgroundSessionCheck;
 
 window.encryptUrlData = encryptUrlData;
 window.decryptUrlData = decryptUrlData;
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (getToken()) initBackgroundSessionCheck();
+});
