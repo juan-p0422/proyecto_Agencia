@@ -34,6 +34,66 @@ function getCurrentUser() {
   }
 }
 
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== "string") return null;
+
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    let base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) base64 += "=";
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+        .join("")
+    );
+
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function startSessionTimer(token = getToken()) {
+  const payload = decodeJwtPayload(token);
+  const startedAt = payload?.iat ? payload.iat * 1000 : Date.now();
+  const expiresAt = payload?.exp ? payload.exp * 1000 : null;
+
+  localStorage.setItem("session_start", String(startedAt));
+  if (expiresAt) localStorage.setItem("session_expires_at", String(expiresAt));
+  else localStorage.removeItem("session_expires_at");
+}
+
+function getSessionStart() {
+  const raw = Number(localStorage.getItem("session_start"));
+  if (Number.isFinite(raw) && raw > 0) return raw;
+
+  if (getToken()) {
+    startSessionTimer();
+    return Number(localStorage.getItem("session_start"));
+  }
+
+  return null;
+}
+
+function getSessionElapsed() {
+  const startedAt = getSessionStart();
+  return startedAt ? Math.max(Date.now() - startedAt, 0) : 0;
+}
+
+function formatSessionTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
+}
+
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
