@@ -1,0 +1,47 @@
+# Configuracion de los nuevos contenedores
+services:
+
+  mirror_master_ssl:
+    image: mysql:8.0
+
+    container_name: mirror_master_ssl
+
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: agencia_viajes
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mirror_master_ssl_data:/var/lib/mysql
+      - ../mysql/master/conf.d:/etc/mysql/conf.d
+      - ../mysql/master/ssl:/etc/mysql/ssl
+
+  mirror_slave_ssl:
+    image: mysql:8.0
+
+    container_name: mirror_slave_ssl
+
+    command: --server-id=202
+
+    restart: always
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+    ports:
+      - "3307:3306"
+
+    depends_on:
+      - mirror_master_ssl
+
+    volumes:
+      - mirror_slave_ssl_data:/var/lib/mysql
+      - ../mysql/slave/conf.d:/etc/mysql/conf.d
+      - ../mysql/slave/ssl:/etc/mysql/ssl
+
+volumes:
+  mirror_master_ssl_data:
+  mirror_slave_ssl_data:
