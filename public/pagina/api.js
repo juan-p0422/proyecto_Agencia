@@ -35,11 +35,107 @@ function getCurrentUser() {
   }
 }
 
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== "string") return null;
+
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    let base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) base64 += "=";
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+        .join("")
+    );
+
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function startSessionTimer(token = getToken()) {
+  const payload = decodeJwtPayload(token);
+  const startedAt = payload?.iat ? payload.iat * 1000 : Date.now();
+  const expiresAt = payload?.exp ? payload.exp * 1000 : null;
+
+  localStorage.setItem("session_start", String(startedAt));
+  if (expiresAt) localStorage.setItem("session_expires_at", String(expiresAt));
+  else localStorage.removeItem("session_expires_at");
+}
+
+function getSessionStart() {
+  const raw = Number(localStorage.getItem("session_start"));
+  if (Number.isFinite(raw) && raw > 0) return raw;
+
+  if (getToken()) {
+    startSessionTimer();
+    return Number(localStorage.getItem("session_start"));
+  }
+
+  return null;
+}
+
+function getSessionElapsed() {
+  const startedAt = getSessionStart();
+  return startedAt ? Math.max(Date.now() - startedAt, 0) : 0;
+}
+
+function formatSessionTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
+}
+
+function getSessionExpiration() {
+  const raw = Number(localStorage.getItem("session_expires_at"));
+  if (Number.isFinite(raw) && raw > 0) return raw;
+
+  if (getToken()) {
+    startSessionTimer();
+    const expiresAt = Number(localStorage.getItem("session_expires_at"));
+    return Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : null;
+  }
+
+  return null;
+}
+
+function isSessionExpired() {
+  const expiresAt = getSessionExpiration();
+  return expiresAt ? Date.now() >= expiresAt : false;
+}
+
+function checkSessionInBackground() {
+  if (getToken() && isSessionExpired()) {
+    logout();
+    return true;
+  }
+
+  return false;
+}
+
+function initBackgroundSessionCheck() {
+  checkSessionInBackground();
+  if (window.sessionCheckInterval) clearInterval(window.sessionCheckInterval);
+  window.sessionCheckInterval = setInterval(checkSessionInBackground, 5000);
+}
+
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
   localStorage.removeItem("pending_2fa");
   localStorage.removeItem("enroll_2fa");
+  localStorage.removeItem("session_start");
+  localStorage.removeItem("session_expires_at");
+  if (window.sessionCheckInterval) clearInterval(window.sessionCheckInterval);
   location.href = "index.html";
 }
 
@@ -50,6 +146,7 @@ function renderMenu() {
   const user = getCurrentUser();
 
   if (user) {
+    initBackgroundSessionCheck();
     menu.innerHTML = `
       <span>Hola, ${window.escapeHTML(user.Nombre ?? "Usuario")}</span>
       <a href="perfil.html">Mi perfil</a>
@@ -102,6 +199,8 @@ function buildError(res, body, endpoint) {
 }
 
 async function apiRequest(endpoint, { method = "GET", body = null, headers = {} } = {}) {
+  checkSessionInBackground();
+
   const url = window.API_URL + endpoint;
 
   const finalHeaders = {
@@ -128,6 +227,11 @@ async function apiRequest(endpoint, { method = "GET", body = null, headers = {} 
 
   const res = await fetch(url, fetchOptions);
   const parsed = await parseBody(res);
+
+  if (res.status === 401 && getToken()) {
+    logout();
+    return null;
+  }
 
   if (!res.ok) throw buildError(res, parsed, `${method} ${endpoint}`);
   return parsed;
@@ -221,6 +325,15 @@ window.detachUsuarioFromReservacion = detachUsuarioFromReservacion;
 window.getCurrentUser = getCurrentUser;
 window.renderMenu = renderMenu;
 window.logout = logout;
+window.startSessionTimer = startSessionTimer;
+window.getSessionElapsed = getSessionElapsed;
+window.formatSessionTime = formatSessionTime;
+window.checkSessionInBackground = checkSessionInBackground;
+window.initBackgroundSessionCheck = initBackgroundSessionCheck;
 
 window.encryptUrlData = encryptUrlData;
 window.decryptUrlData = decryptUrlData;
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (getToken()) initBackgroundSessionCheck();
+});
