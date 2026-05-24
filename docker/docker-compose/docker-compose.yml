@@ -1,47 +1,205 @@
-# Configuracion de los nuevos contenedores
+# ============================================
+# Docker Compose - Agencia de Viajes
+# Modo práctica local de seguridad
+# ============================================
+#
+# OBJETIVO DE ESTE COMPOSE:
+# - Levantar únicamente Fail2ban.
+# - NO levantar MySQL Master/Slave SSL para no afectar:
+#   1) El contenedor MySQL que ya tienes: laravel_mysql.
+#   2) La configuración SSL que está en la computadora de tu compañero.
+#   3) El puerto 3306 que ya está ocupado por laravel_mysql.
+#
+# ARQUITECTURA ACTUAL:
+# - Laravel corre en tu máquina o proyecto local.
+# - MySQL real del proyecto corre en el contenedor existente: laravel_mysql.
+# - Fail2ban corre en Docker y lee los logs de Laravel.
+# - Snort corre nativo en Windows, fuera de Docker.
+#
+# NOTA IMPORTANTE:
+# - Este compose NO levanta laravel_mysql.
+# - laravel_mysql se inicia aparte con:
+#     docker start laravel_mysql
+# - Para evitar problemas de redes eliminadas por docker compose down,
+#   se recomienda usar una red externa fija llamada agencia_net.
+# ============================================
+
 services:
 
-  mirror_master_ssl:
-    image: mysql:8.0
+  # ==========================================
+  # Fail2ban
+  # ==========================================
+  #
+  # Este servicio lee los logs de Laravel desde:
+  #   ../../storage/logs
+  #
+  # Dentro del contenedor se montan como:
+  #   /var/log/laravel
+  #
+  # Por eso en la jail de Fail2ban usamos:
+  #   logpath = /var/log/laravel/laravel.log
+  #
+  # Fail2ban aplicará reglas de bloqueo mediante iptables
+  # dentro del entorno Linux del contenedor.
+  #
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: agencia_fail2ban
 
-    container_name: mirror_master_ssl
-
-    restart: always
-
-    environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: agencia_viajes
-
-    ports:
-      - "3306:3306"
-
-    volumes:
-      - mirror_master_ssl_data:/var/lib/mysql
-      - ../mysql/master/conf.d:/etc/mysql/conf.d
-      - ../mysql/master/ssl:/etc/mysql/ssl
-
-  mirror_slave_ssl:
-    image: mysql:8.0
-
-    container_name: mirror_slave_ssl
-
-    command: --server-id=202
-
-    restart: always
-
-    environment:
-      MYSQL_ROOT_PASSWORD: root123
-    ports:
-      - "3307:3306"
-
-    depends_on:
-      - mirror_master_ssl
+    # Permisos necesarios para que Fail2ban pueda manipular iptables
+    # dentro del contenedor.
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
 
     volumes:
-      - mirror_slave_ssl_data:/var/lib/mysql
-      - ../mysql/slave/conf.d:/etc/mysql/conf.d
-      - ../mysql/slave/ssl:/etc/mysql/ssl
+      # Carpeta persistente principal de la imagen crazymax/fail2ban.
+      # Aquí se guardan datos, base SQLite, acciones, filtros y jails.
+      - ./fail2ban:/data
 
+      # Montaje directo de jails personalizadas.
+      # Esto asegura que Fail2ban cargue laravel.conf desde /etc/fail2ban/jail.d.
+      - ./fail2ban/jail.d:/etc/fail2ban/jail.d:ro
+
+      # Montaje directo de filtros personalizados.
+      # Esto asegura que Fail2ban cargue laravel-login.conf desde /etc/fail2ban/filter.d.
+      - ./fail2ban/filter.d:/etc/fail2ban/filter.d:ro
+
+      # Logs de Laravel montados en modo solo lectura.
+      # Ruta local:
+      #   ../../storage/logs
+      #
+      # Ruta dentro del contenedor:
+      #   /var/log/laravel
+      #
+      # La jail usa:
+      #   logpath = /var/log/laravel/laravel.log
+      - ../../storage/logs:/var/log/laravel:ro
+
+    environment:
+      - TZ=America/Mexico_City
+      - F2B_LOG_LEVEL=INFO
+
+    restart: unless-stopped
+
+    # Conectamos Fail2ban a la red de la práctica.
+    # Tu contenedor laravel_mysql también debe estar conectado aquí.
+    networks:
+      - agencia_net
+
+
+  # ==========================================
+  # MySQL Master SSL - DESACTIVADO
+  # ==========================================
+  #
+  # Este servicio queda comentado para no afectar tu entorno local.
+  #
+  # Motivos:
+  # - Ya tienes un contenedor MySQL funcionando llamado laravel_mysql.
+  # - laravel_mysql ya ocupa el puerto 3306.
+  # - Si activas este servicio con "3306:3306", Docker marcará:
+  #   "port is already allocated".
+  # - Además, los archivos SSL están en la computadora de tu compañero.
+  #
+  # Para usarlo en otra máquina, primero habría que:
+  # - Tener los certificados SSL en ../mysql/ssl
+  # - Liberar el puerto 3306
+  # - O cambiar el puerto host a 3308:3306
+  #
+  # mirror_master_ssl:
+  #   image: mysql:8.0
+  #   container_name: mirror_master_ssl
+  #   restart: always
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+  #     MYSQL_DATABASE: ${DB_DATABASE}
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mirror_master_ssl_data:/var/lib/mysql
+  #     - ../mysql/master/conf.d:/etc/mysql/conf.d
+  #     - ../mysql/ssl:/etc/mysql/ssl
+  #     - ../mysql/logs:/var/log/mysql
+  #   networks:
+  #     - agencia_net
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 5
+
+
+  # ==========================================
+  # MySQL Slave SSL - DESACTIVADO
+  # ==========================================
+  #
+  # Este servicio también queda comentado.
+  #
+  # Motivos:
+  # - Depende de mirror_master_ssl.
+  # - Usa configuración SSL que no está en tu máquina.
+  # - Expone el puerto 3307, que solo necesitas si vas a demostrar
+  #   replicación Master/Slave.
+  #
+  # Para una práctica de Fail2ban + Snort + Laravel, no es obligatorio.
+  #
+  # mirror_slave_ssl:
+  #   image: mysql:8.0
+  #   container_name: mirror_slave_ssl
+  #   command: --server-id=202
+  #   restart: always
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${DB_SLAVE_ROOT_PASSWORD}
+  #   ports:
+  #     - "3307:3306"
+  #   depends_on:
+  #     - mirror_master_ssl
+  #   volumes:
+  #     - mirror_slave_ssl_data:/var/lib/mysql
+  #     - ../mysql/slave/ssl:/etc/mysql/conf.d
+  #     - ../mysql/ssl:/etc/mysql/ssl
+  #     - ../mysql/logs_slave:/var/log/mysql
+  #   networks:
+  #     - agencia_net
+
+
+# ============================================
+# Redes
+# ============================================
+#
+# Usamos una red externa fija llamada agencia_net.
+#
+# Ventaja:
+# - No se borra cuando ejecutas:
+#     docker compose down
+#
+# Esto evita el error que ya te pasó:
+#   network <ID> not found
+#
+# IMPORTANTE:
+# Antes de levantar este compose, crea la red con:
+#   docker network create agencia_net
+#
+# Y conecta tu MySQL existente:
+#   docker network connect agencia_net laravel_mysql
+#
+# Si Docker dice que ya existe, no pasa nada.
+#
+networks:
+  agencia_net:
+    external: true
+
+
+# ============================================
+# Volúmenes
+# ============================================
+#
+# Estos volúmenes quedan declarados por compatibilidad con
+# la configuración original, pero no se usarán mientras los
+# servicios MySQL SSL estén comentados.
+#
+# Puedes dejarlos sin problema.
+#
 volumes:
   mirror_master_ssl_data:
   mirror_slave_ssl_data:

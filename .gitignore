@@ -22,3 +22,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Variables de entorno Docker (NO subir credenciales)
+docker/docker-compose/.env
+docker/**/.env
